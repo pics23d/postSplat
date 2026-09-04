@@ -1,0 +1,31 @@
+# [custom] Desktop packaging. `npm run desktop:pack` -> release/
+appId: de.guy-middleton.supersplat.desktop
+productName: SuperSplat Desktop
+copyright: MIT — PlayCanvas SuperSplat, custom desktop build
+
+directories:
+  output: release
+
+files:
+  - dist/**
+  - "!dist/**/*.map"
+  - electron/dist/**
+  - "!electron/dist/**/*.map"
+  - package.json
+
+asar: true
+
+win:
+  target:
+    - nsis
+    - portable
+  icon: static/icons/logo-512.png
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: SuperSplat Desktop
+
+portable:
+  artifactName: ${productName}-${version}-portable.exe

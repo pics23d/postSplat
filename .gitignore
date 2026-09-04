@@ -6,3 +6,10 @@
 .vscode
 dist
 node_modules
+
+# [custom] desktop build + local working folders
+release
+electron/dist
+_bkp
+_input
+_notes

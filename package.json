@@ -12,7 +12,7 @@
         "editor"
     ],
     "license": "MIT",
-    "main": "index.js",
+    "main": "electron/dist/main.js",
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -c -w",
@@ -20,7 +20,13 @@
         "develop": "cross-env BUILD_TYPE=debug concurrently --kill-others \"npm run watch\" \"npm run serve\"",
         "develop:auto-launch": "concurrently --kill-others \"xdg-open 'http://localhost:3000/'\" \"npm run watch\" \"npm run serve\"",
         "lint": "eslint src",
-        "lint:locales": "node scripts/check-locales.mjs"
+        "lint:locales": "node scripts/check-locales.mjs",
+        "test": "node --import tsx --test \"test/**/*.test.ts\"",
+        "desktop:main": "tsc -p electron/tsconfig.json",
+        "desktop:build": "cross-env BUILD_TYPE=debug rollup -c && npm run desktop:main",
+        "desktop:start": "node scripts/desktop-start.mjs",
+        "desktop:dev": "npm run desktop:build && npm run desktop:start",
+        "desktop:pack": "rollup -c && npm run desktop:main && electron-builder --win"
     },
     "engines": {
         "node": ">=20.19.0"
@@ -35,6 +41,7 @@
         "@rollup/plugin-node-resolve": "16.0.3",
         "@rollup/plugin-terser": "1.0.0",
         "@rollup/plugin-typescript": "12.3.0",
+        "@types/node": "^26.4.1",
         "@types/wicg-file-system-access": "2023.10.7",
         "@typescript-eslint/eslint-plugin": "8.70.0",
         "@typescript-eslint/parser": "8.70.0",
@@ -42,6 +49,8 @@
         "autoprefixer": "10.5.5",
         "concurrently": "10.0.5",
         "cross-env": "10.1.0",
+        "electron": "^44.2.0",
+        "electron-builder": "^26.15.3",
         "eslint": "10.10.0",
         "eslint-import-resolver-typescript": "4.4.5",
         "globals": "17.12.0",
@@ -56,6 +65,7 @@
         "sass": "1.104.0",
         "serve": "14.2.6",
         "tslib": "2.8.1",
+        "tsx": "^4.23.13",
         "typescript": "6.0.3"
     }
 }

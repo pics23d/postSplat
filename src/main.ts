@@ -3,6 +3,7 @@ import { Color, createGraphicsDevice } from 'playcanvas';
 
 import { registerCameraPosesEvents } from './camera-poses';
 import { CommandQueue } from './command-queue';
+import { desktop } from './desktop/bridge'; // [custom]
 import { registerDocEvents } from './doc';
 import { EditHistory } from './edit-history';
 import { registerEditorEvents } from './editor';
@@ -311,6 +312,11 @@ const main = async () => {
             }
         });
     }
+
+    // [custom] files handed over by the desktop shell while running (second instance)
+    desktop()?.onOpenFiles(async (files) => {
+        await events.invoke('import', files.map(file => ({ filename: file.filename, url: file.url })));
+    });
 };
 
 export { main };

@@ -319,6 +319,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             }
             model.resource.fileSources = fileSystem.sources;
             await scene.add(model);
+            // [custom] url-only loads use the url as load name; show the real filename in
+            // the UI (after add: the name setter fires 'splat.name' on the splat's scene)
+            if (filename !== mainFile.filename && model.name === filename) {
+                model.name = mainFile.filename;
+            }
             return model;
         } catch (error) {
             const displayName = files[0]?.filename ?? 'unknown';
