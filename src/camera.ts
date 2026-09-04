@@ -33,6 +33,7 @@ import { Element, ElementType } from './element';
 import { Picker } from './picker';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
+import { SpaceMouseController } from './spacemouse/controller'; // [custom]
 import { Splat } from './splat';
 import { TweenValue } from './tween-value';
 import { ShaderQuad, SimpleRenderPass } from './utils/simple-render-pass';
@@ -72,6 +73,7 @@ class Camera extends Element {
     }
 
     controller: PointerController;
+    spaceMouse: SpaceMouseController | null = null; // [custom]
     focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
     azimElevTween = new TweenValue({ azim: 30, elev: -15 });
     distanceTween = new TweenValue({ distance: 1 });
@@ -353,6 +355,7 @@ class Camera extends Element {
 
         const target = document.getElementById('canvas-container');
         this.controller = new PointerController(this, target);
+        this.spaceMouse = new SpaceMouseController(this, scene.events); // [custom]
 
         // apply scene config
         const config = scene.config;
@@ -448,6 +451,7 @@ class Camera extends Element {
 
         this.controller.destroy();
         this.controller = null;
+        this.spaceMouse = null; // [custom]
 
         // cleanup render passes
         this.clearPass?.destroy();
@@ -598,6 +602,7 @@ class Camera extends Element {
 
     onUpdate(deltaTime: number) {
         // controller update
+        this.spaceMouse?.update(deltaTime); // [custom] 6-DOF puck, one latched snapshot per frame
         this.controller.update(deltaTime);
 
         // update underlying values

@@ -276,6 +276,13 @@ class PointerController {
         };
 
         const wheel = (event: WheelEvent) => {
+            // [custom] 3DxWare's default profile synthesizes wheel events from puck
+            // rotation for apps it does not recognize; swallow them while the puck rotates
+            if (camera.spaceMouse?.rotationActive()) {
+                event.preventDefault();
+                return;
+            }
+
             const { deltaX, deltaY } = event;
 
             // Some browsers (notably Safari/Firefox on macOS) remap a vertical

@@ -1,4 +1,4 @@
-import { BooleanInput, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { i18n } from './localization';
@@ -255,7 +255,127 @@ class SettingsPanel extends Container {
         stochasticRow.append(stochasticLabel);
         stochasticRow.append(stochasticSelection);
 
+        // [custom] SpaceMouse (src/spacemouse). Defaults mirror SpaceMouseTuning:
+        // preferences only notify on change, so unchanged stored values never reach the UI.
+
+        const spaceMouseAvailable = !!events.invoke('spacemouse.available');
+
+        const spaceMouseStatusRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const spaceMouseStatusLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(spaceMouseStatusLabel, 'panel.settings.spacemouse-device');
+
+        const spaceMouseStatus = new Label({
+            class: 'settings-panel-row-label'
+        });
+
+        const spaceMouseConnectButton = new Button({
+            class: 'settings-panel-row-button'
+        });
+        i18n.bindText(spaceMouseConnectButton, 'panel.settings.spacemouse-connect');
+
+        spaceMouseStatusRow.append(spaceMouseStatusLabel);
+        spaceMouseStatusRow.append(spaceMouseStatus);
+        spaceMouseStatusRow.append(spaceMouseConnectButton);
+
+        const spaceMouseEnabledRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const spaceMouseEnabledLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(spaceMouseEnabledLabel, 'panel.settings.spacemouse-enabled');
+
+        const spaceMouseEnabledToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: true
+        });
+
+        spaceMouseEnabledRow.append(spaceMouseEnabledLabel);
+        spaceMouseEnabledRow.append(spaceMouseEnabledToggle);
+
+        const spaceMouseScaleRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const spaceMouseScaleLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(spaceMouseScaleLabel, 'panel.settings.spacemouse-sensitivity');
+
+        const spaceMouseScaleSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0.1,
+            max: 10,
+            precision: 2,
+            value: 1
+        });
+
+        spaceMouseScaleRow.append(spaceMouseScaleLabel);
+        spaceMouseScaleRow.append(spaceMouseScaleSlider);
+
+        const spaceMouseDeadzoneRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const spaceMouseDeadzoneLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(spaceMouseDeadzoneLabel, 'panel.settings.spacemouse-deadzone');
+
+        const spaceMouseDeadzoneSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 0.5,
+            precision: 2,
+            value: 0.03
+        });
+
+        spaceMouseDeadzoneRow.append(spaceMouseDeadzoneLabel);
+        spaceMouseDeadzoneRow.append(spaceMouseDeadzoneSlider);
+
+        // per-axis invert flags: three labelled toggles per row (translation, rotation)
+        const invertRow = (key: string, axisNames: string[]) => {
+            const row = new Container({
+                class: 'settings-panel-row'
+            });
+            const label = new Label({
+                class: 'settings-panel-row-label'
+            });
+            i18n.bindText(label, key);
+            const group = new Container();
+            group.dom.style.display = 'flex';
+            group.dom.style.alignItems = 'center';
+            group.dom.style.gap = '6px';
+            const toggles = axisNames.map((axisName) => {
+                const axisLabel = new Label({ text: axisName });
+                axisLabel.dom.style.opacity = '0.7';
+                const toggle = new BooleanInput({
+                    type: 'toggle',
+                    class: 'settings-panel-row-toggle',
+                    value: false
+                });
+                group.append(axisLabel);
+                group.append(toggle);
+                return toggle;
+            });
+            row.append(label);
+            row.append(group);
+            return { row, toggles };
+        };
+
+        const spaceMouseInvertTranslation = invertRow('panel.settings.spacemouse-invert-translation', ['X', 'Y', 'Z']);
+        const spaceMouseInvertRotation = invertRow('panel.settings.spacemouse-invert-rotation', ['X', 'Y', 'Z']);
+        const spaceMouseInvertToggles = [...spaceMouseInvertTranslation.toggles, ...spaceMouseInvertRotation.toggles];
+
         rowToggles(fovDollyRow, fovDollyToggle);
+        rowToggles(spaceMouseEnabledRow, spaceMouseEnabledToggle);
 
         this.append(header);
         this.append(languageRow);
@@ -267,6 +387,14 @@ class SettingsPanel extends Container {
         this.append(cameraFlySpeedRow);
         this.append(fovRow);
         this.append(fovDollyRow);
+        // [custom]
+        this.append(sectionHeader('panel.settings.section-spacemouse'));
+        this.append(spaceMouseStatusRow);
+        this.append(spaceMouseEnabledRow);
+        this.append(spaceMouseScaleRow);
+        this.append(spaceMouseDeadzoneRow);
+        this.append(spaceMouseInvertTranslation.row);
+        this.append(spaceMouseInvertRotation.row);
 
         // handle panel visibility
 
@@ -359,6 +487,62 @@ class SettingsPanel extends Container {
 
         tonemappingSelection.on('change', (value: string) => {
             events.fire('camera.setTonemapping', value);
+        });
+
+        // [custom] spacemouse
+
+        const updateSpaceMouseStatus = () => {
+            const connected = spaceMouseAvailable && !!events.invoke('spacemouse.connected');
+            if (!spaceMouseAvailable) {
+                spaceMouseStatus.text = i18n.t('panel.settings.spacemouse-status.unavailable');
+            } else if (connected) {
+                spaceMouseStatus.text = i18n.t('panel.settings.spacemouse-status.connected', { name: events.invoke('spacemouse.deviceName') });
+            } else {
+                spaceMouseStatus.text = i18n.t('panel.settings.spacemouse-status.disconnected');
+            }
+            spaceMouseConnectButton.hidden = !spaceMouseAvailable || connected;
+        };
+        i18n.onChange(updateSpaceMouseStatus, spaceMouseStatus);
+        events.on('spacemouse.connected', updateSpaceMouseStatus);
+
+        spaceMouseConnectButton.on('click', () => {
+            events.fire('spacemouse.connect');
+        });
+
+        events.on('spacemouse.enabled', (value: boolean) => {
+            spaceMouseEnabledToggle.value = value;
+        });
+
+        spaceMouseEnabledToggle.on('change', (value: boolean) => {
+            events.fire('spacemouse.setEnabled', value);
+        });
+
+        events.on('spacemouse.scale', (value: number) => {
+            spaceMouseScaleSlider.value = value;
+        });
+
+        spaceMouseScaleSlider.on('change', (value: number) => {
+            events.fire('spacemouse.setScale', value);
+        });
+
+        events.on('spacemouse.deadzone', (value: number) => {
+            spaceMouseDeadzoneSlider.value = value;
+        });
+
+        spaceMouseDeadzoneSlider.on('change', (value: number) => {
+            events.fire('spacemouse.setDeadzone', value);
+        });
+
+        events.on('spacemouse.invert', (flags: boolean[]) => {
+            flags.forEach((flag, i) => {
+                spaceMouseInvertToggles[i].value = flag;
+            });
+        });
+
+        spaceMouseInvertToggles.forEach((toggle) => {
+            toggle.on('change', () => {
+                events.fire('spacemouse.setInvert', spaceMouseInvertToggles.map(t => !!t.value));
+            });
         });
 
         // reset preferences

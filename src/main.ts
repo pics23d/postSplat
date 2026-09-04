@@ -18,6 +18,7 @@ import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
 import { registerSequenceEvents } from './sequence';
 import { ShortcutManager } from './shortcut-manager';
+import { registerSpaceMouseEvents } from './spacemouse/events'; // [custom]
 import { registerTimelineEvents } from './timeline';
 import { BoxSelection } from './tools/box-selection';
 import { BrushSelection } from './tools/brush-selection';
@@ -117,6 +118,7 @@ const main = async () => {
     registerTransformHandlerEvents(events);
     registerPublishEvents(events);
     registerIframeApi(events);
+    registerSpaceMouseEvents(events); // [custom] before the UI and the scene so both can query it
 
     // initialize shortcuts
     const shortcutManager = new ShortcutManager(events);
