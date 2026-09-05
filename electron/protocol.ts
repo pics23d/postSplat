@@ -54,10 +54,14 @@ export const registerAppScheme = () => {
 
 // Applied to HTML responses only. Everything the editor needs is same-origin;
 // inline styles are used by PCUI, wasm needs 'wasm-unsafe-eval', video export
-// and image tools use blob: URLs.
+// and image tools use blob: URLs. 'unsafe-eval' is required: PCUI's NumericInput
+// evaluates typed text as a small arithmetic expression through Function(), and
+// without it every Enter in a numeric field silently resets the value to 0
+// (found 2026-09-06; note that CDP Runtime.evaluate lifts the eval block, so
+// only real key events reproduce it).
 const CONTENT_SECURITY_POLICY = [
     "default-src 'self'",
-    "script-src 'self' 'wasm-unsafe-eval'",
+    "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",

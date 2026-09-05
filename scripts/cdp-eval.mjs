@@ -16,6 +16,15 @@ let port = 9222;
 let awaitPromise = false;
 let focus = false;
 let click = null;
+let typeText = null;
+const keys = [];
+let timeoutMs = 15000;
+
+// a native modal dialog in the main process stalls CDP; never hang the harness on it
+setTimeout(() => {
+    console.error(`cdp-eval: timed out after ${timeoutMs} ms (main process blocked by a dialog?)`);
+    process.exit(124);
+}, timeoutMs).unref();
 let screenshot = null;
 const rest = [];
 for (let i = 0; i < args.length; i++) {
@@ -34,6 +43,14 @@ for (let i = 0; i < args.length; i++) {
         // save the page as rendered (PNG) after evaluating — no focus change, unlike a
         // desktop capture, so it works while other windows cover the app
         screenshot = args[++i];
+    } else if (args[i] === '--timeout') {
+        timeoutMs = Number(args[++i]);
+    } else if (args[i] === '--type') {
+        // insert text into the focused element as real input (Input.insertText)
+        typeText = args[++i];
+    } else if (args[i] === '--key') {
+        // press a key on the focused element, e.g. Enter, Tab, Escape (keyDown + keyUp)
+        keys.push(args[++i]);
     } else {
         rest.push(args[i]);
     }
@@ -82,6 +99,17 @@ if (click) {
     for (const type of ['mousePressed', 'mouseReleased']) {
         await call('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
     }
+}
+
+if (typeText !== null) {
+    await call('Input.insertText', { text: typeText });
+}
+
+const KEY_CODES = { Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46, ArrowUp: 38, ArrowDown: 40 };
+for (const key of keys) {
+    const base = { key, code: key, windowsVirtualKeyCode: KEY_CODES[key] ?? 0, nativeVirtualKeyCode: KEY_CODES[key] ?? 0 };
+    await call('Input.dispatchKeyEvent', { type: 'keyDown', ...base, ...(key === 'Enter' ? { text: '\r' } : {}) });
+    await call('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
 }
 
 const wrapped = awaitPromise ? `(async () => { return ${expression}; })()` : expression;
