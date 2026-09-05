@@ -124,6 +124,19 @@ class StatusBar extends Container {
                 updateStats();
             }
         });
+
+        // [custom] the tracked splat leaving the scene (File > New, delete layer) must
+        // zero the counters; upstream keeps showing the last splat's numbers
+        events.on('scene.elementRemoved', (element: Element) => {
+            if (element === splat) {
+                splat = null;
+                const zero = i18n.formatInteger(0);
+                splatsValue.text = zero;
+                selectedValue.text = zero;
+                lockedValue.text = zero;
+                deletedValue.text = zero;
+            }
+        });
     }
 }
 

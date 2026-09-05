@@ -15,6 +15,8 @@ const args = process.argv.slice(2);
 let port = 9222;
 let awaitPromise = false;
 let focus = false;
+let click = null;
+let screenshot = null;
 const rest = [];
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--port') {
@@ -24,6 +26,14 @@ for (let i = 0; i < args.length; i++) {
     } else if (args[i] === '--focus') {
         // bring the window to front first (input controllers ignore an unfocused document)
         focus = true;
+    } else if (args[i] === '--click') {
+        // synthesize a left click at CSS pixel x,y first: grants user activation, which
+        // Chromium requires before it honours beforeunload / prompts
+        click = args[++i].split(',').map(Number);
+    } else if (args[i] === '--screenshot') {
+        // save the page as rendered (PNG) after evaluating — no focus change, unlike a
+        // desktop capture, so it works while other windows cover the app
+        screenshot = args[++i];
     } else {
         rest.push(args[i]);
     }
@@ -47,6 +57,8 @@ await new Promise((resolve, reject) => {
     ws.onerror = reject;
 });
 
+import fs from 'node:fs';
+
 const call = (method, params = {}) => new Promise((resolve, reject) => {
     const id = Math.floor(Math.random() * 1e9);
     const onMessage = (event) => {
@@ -65,12 +77,26 @@ if (focus) {
     await call('Page.bringToFront');
 }
 
+if (click) {
+    const [x, y] = click;
+    for (const type of ['mousePressed', 'mouseReleased']) {
+        await call('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
+    }
+}
+
 const wrapped = awaitPromise ? `(async () => { return ${expression}; })()` : expression;
 const result = await call('Runtime.evaluate', {
     expression: wrapped,
     awaitPromise,
     returnByValue: true
 });
+
+if (screenshot) {
+    const shot = await call('Page.captureScreenshot', { format: 'png' });
+    fs.writeFileSync(screenshot, Buffer.from(shot.data, 'base64'));
+    console.error(`screenshot saved ${screenshot}`);
+}
+
 ws.close();
 
 if (result.exceptionDetails) {

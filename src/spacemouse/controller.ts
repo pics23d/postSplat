@@ -23,8 +23,12 @@ import { Events } from '../events';
 
 const DEFAULT_SIGNS = { tx: 1, ty: -1, tz: -1, rx: -1, ry: -1, rz: 1 };
 
-/** scene units per second at full deflection, × camera.flySpeed × spacemouse.scale (fly-tested 2026-09-05) */
-const TRANSLATE_SPEED = 3;
+/**
+ * focal distances per second at full deflection, × camera.flySpeed × spacemouse.scale.
+ * Relative to Camera.focalDistance so huge and tiny scenes both fly sensibly; 2 matches the
+ * fly-tested 3 units/s on the fixture scene (focal distance ≈ 1.4 there), 2026-09-05.
+ */
+const TRANSLATE_SPEED = 2;
 /** degrees per second at full deflection, × spacemouse.scale (fly-tested 2026-09-05) */
 const ROTATE_SPEED = 180;
 /** how long after the last rotation report driver-synthesized wheel events are swallowed */
@@ -126,7 +130,7 @@ export class SpaceMouseController {
         }
 
         if (strafeRight !== 0 || flyForward !== 0 || moveUp !== 0) {
-            const factor = TRANSLATE_SPEED * this.camera.flySpeed * tuning.scale * speedMod * dt;
+            const factor = TRANSLATE_SPEED * this.camera.focalDistance * this.camera.flySpeed * tuning.scale * speedMod * dt;
             this.translate(strafeRight * factor, flyForward * factor, moveUp * factor);
         }
 

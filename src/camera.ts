@@ -711,6 +711,15 @@ class Camera extends Element {
         return Math.sin(this.fov * math.DEG_TO_RAD * 0.5);
     }
 
+    // [custom] world-space distance from the camera to the focal point: the scale
+    // reference for fly-mode wheel dolly and the SpaceMouse. Absolute speeds
+    // (scene units per second) are useless after "Fit" on a scene whose bound is
+    // inflated by outliers (camera parked 10k units out, 2026-09-05), and too
+    // fast once focused on a small detail; relative speeds behave like orbit zoom.
+    get focalDistance() {
+        return Math.max(1e-3, this.distanceTween.value.distance * this.sceneRadius / this.fovFactor);
+    }
+
     // world size of one screen pixel at the given view depth (ortho is
     // depth-independent)
     worldSizePerPixel(depth: number) {

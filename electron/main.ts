@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { app, BrowserWindow, ipcMain, Menu, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } from 'electron';
 import type { MenuItemConstructorOptions } from 'electron';
 
 import { installDevicePolicies } from './hid';
@@ -55,6 +55,70 @@ const loadUrlFor = (files: string[]) => {
         url.searchParams.append('filename', entry.filename);
     }
     return url.toString();
+};
+
+// Window bounds persist across launches (userData/window-state.json) so the app
+// comes back where the user left it instead of centered over other windows.
+type WindowState = { x?: number, y?: number, width: number, height: number, maximized?: boolean };
+
+const DEFAULT_WINDOW: WindowState = { width: 1600, height: 1000 };
+
+const windowStateFile = () => path.join(app.getPath('userData'), 'window-state.json');
+
+const loadWindowState = (): WindowState => {
+    try {
+        const state = JSON.parse(fs.readFileSync(windowStateFile(), 'utf8'));
+        if (Number.isFinite(state.width) && Number.isFinite(state.height) && state.width >= 400 && state.height >= 300) {
+            return state;
+        }
+    } catch {
+        // first launch or unreadable file
+    }
+    return { ...DEFAULT_WINDOW };
+};
+
+// only restore a position that is still (mostly) on a connected display
+const isOnScreen = (state: WindowState) => {
+    if (!Number.isFinite(state.x) || !Number.isFinite(state.y)) {
+        return false;
+    }
+    return screen.getAllDisplays().some(({ workArea }) => {
+        return state.x! + state.width > workArea.x + 60 &&
+            state.x! < workArea.x + workArea.width - 60 &&
+            state.y! >= workArea.y - 20 &&
+            state.y! < workArea.y + workArea.height - 60;
+    });
+};
+
+const saveWindowState = (win: BrowserWindow) => {
+    if (win.isDestroyed()) {
+        return;
+    }
+    const state: WindowState = { ...win.getNormalBounds(), maximized: win.isMaximized() };
+    try {
+        fs.writeFileSync(windowStateFile(), JSON.stringify(state));
+    } catch (error) {
+        log(`[shell] window state not saved: ${(error as Error).message}`);
+    }
+};
+
+const trackWindowState = (win: BrowserWindow) => {
+    let timer: NodeJS.Timeout | null = null;
+    const scheduleSave = () => {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            saveWindowState(win);
+        }, 500);
+    };
+    win.on('resize', scheduleSave);
+    win.on('move', scheduleSave);
+    win.on('maximize', scheduleSave);
+    win.on('unmaximize', scheduleSave);
+    win.on('close', () => {
+        if (timer) clearTimeout(timer);
+        saveWindowState(win);
+    });
 };
 
 const createMenu = (win: BrowserWindow) => {
@@ -103,9 +167,13 @@ const attachDiagnostics = (win: BrowserWindow) => {
 };
 
 const createWindow = (files: string[]) => {
+    const state = loadWindowState();
+    const restorePosition = isOnScreen(state);
+
     const win = new BrowserWindow({
-        width: 1600,
-        height: 1000,
+        width: state.width,
+        height: state.height,
+        ...(restorePosition ? { x: state.x, y: state.y } : {}),
         minWidth: 1024,
         minHeight: 640,
         backgroundColor: '#1a1a1a',
@@ -122,7 +190,13 @@ const createWindow = (files: string[]) => {
         }
     });
 
-    win.once('ready-to-show', () => win.show());
+    win.once('ready-to-show', () => {
+        if (state.maximized) {
+            win.maximize();
+        }
+        win.show();
+    });
+    trackWindowState(win);
 
     // external links open in the system browser; the shell never navigates away
     win.webContents.setWindowOpenHandler(({ url }) => {
@@ -137,6 +211,25 @@ const createWindow = (files: string[]) => {
             if (isHttpUrl(url)) {
                 shell.openExternal(url);
             }
+        }
+    });
+
+    // upstream (src/editor.ts) returns a message from `beforeunload` while the scene has
+    // unsaved changes; a browser prompts, Electron would silently cancel the close and the
+    // window's X would appear dead. Ask natively instead and proceed on confirmation.
+    win.webContents.on('will-prevent-unload', (event) => {
+        const choice = dialog.showMessageBoxSync(win, {
+            type: 'question',
+            buttons: ['Quit', 'Cancel'],
+            defaultId: 1,
+            cancelId: 1,
+            noLink: true,
+            title: 'SuperSplat Desktop',
+            message: 'You have unsaved changes.',
+            detail: 'Quit anyway? Unsaved changes will be lost.'
+        });
+        if (choice === 0) {
+            event.preventDefault();
         }
     });
 
@@ -157,7 +250,8 @@ const registerIpc = () => {
         electron: process.versions.electron,
         chrome: process.versions.chrome,
         node: process.versions.node,
-        platform: process.platform
+        platform: process.platform,
+        userData: app.getPath('userData')
     }));
 
     ipcMain.handle('shell:open', (_event, url: unknown) => {

@@ -50,7 +50,7 @@ await (async () => {
     ev.fire('camera.setControlMode', 'orbit');
     ev.fire('camera.reset');
     await new Promise(r => setTimeout(r, 400));
-    const out = { flySpeed: cam.flySpeed, scale: instance.tuning.scale };
+    const out = { flySpeed: cam.flySpeed, scale: instance.tuning.scale, focalDistance: cam.focalDistance };
     out.start = pose();
     await drive({ kind: 'translation', tx: 0, ty: -1, tz: 0 }, 600);
     out.afterForward = pose();
@@ -99,6 +99,7 @@ if (liftDelta[1] < 0.2) failures.push(`lift: moved up only ${liftDelta[1]}`);
 if (Math.hypot(liftDelta[0], liftDelta[2]) > 1e-3) failures.push('lift: moved horizontally');
 
 console.log(JSON.stringify({
+    tuning: { flySpeed: r.flySpeed, scale: r.scale, focalDistance: r.focalDistance },
     forward: { camDelta, mode: r.afterForward.mode },
     yaw: { azimDelta, positionDrift: yawMoved },
     lift: { delta: liftDelta }

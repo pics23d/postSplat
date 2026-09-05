@@ -309,7 +309,8 @@ class PointerController {
                     zoom(isPinch ? deltaY * -0.02 : wheelDelta * -0.002);
                 } else {
                     // Bare scroll / pinch: move focal point forward/backward
-                    const factor = camera.flySpeed * 0.01;
+                    // [custom] scaled by the focal distance (see Camera.focalDistance)
+                    const factor = camera.flySpeed * 0.01 * camera.focalDistance;
                     const worldTransform = camera.mainCamera.getWorldTransform();
                     const zAxis = worldTransform.getZ();
                     moveVec.copy(zAxis).mulScalar(wheelDelta * factor);
