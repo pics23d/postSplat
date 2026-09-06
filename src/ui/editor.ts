@@ -3,6 +3,8 @@ import { Mat4 } from 'playcanvas';
 
 import { AppearancePanel } from './appearance-panel';
 import { DataPanel } from './data-panel';
+import { isDesktop } from '../desktop/bridge'; // [custom]
+import { desktopShowSaveFilePicker } from '../desktop/desktop-file'; // [custom]
 import { Events } from '../events';
 import { ExportSettings } from '../export-settings';
 import type { BlobReadSource } from '../io';
@@ -271,14 +273,18 @@ class EditorUI {
                     const imageFileType = imageFileTypes[imageSettings.format];
 
                     if (window.showSaveFilePicker) {
-                        fileHandle = await window.showSaveFilePicker({
+                        const pickerOptions = {
                             id: 'SuperSplatImageFileExport',
                             types: [{
                                 description: imageFileType.description,
                                 accept: imageFileType.accept
                             }],
                             suggestedName: `${events.invoke('render.baseFilename')}${imageFileType.extension}`
-                        });
+                        };
+                        // [custom] desktop: native dialog defaulting to the last export directory
+                        fileHandle = await (isDesktop() ?
+                            desktopShowSaveFilePicker('export', pickerOptions) as unknown as Promise<FileSystemFileHandle> :
+                            window.showSaveFilePicker(pickerOptions));
 
                         writable = await fileHandle.createWritable();
                     }
@@ -355,11 +361,15 @@ class EditorUI {
                     let fileHandle: FileSystemFileHandle | undefined;
 
                     if (window.showSaveFilePicker) {
-                        fileHandle = await window.showSaveFilePicker({
+                        const pickerOptions = {
                             id: 'SuperSplatVideoFileExport',
                             types: filePickerTypes,
                             suggestedName: suggested
-                        });
+                        };
+                        // [custom] desktop: native dialog defaulting to the last export directory
+                        fileHandle = await (isDesktop() ?
+                            desktopShowSaveFilePicker('export', pickerOptions as any) as unknown as Promise<FileSystemFileHandle> :
+                            window.showSaveFilePicker(pickerOptions));
 
                         writable = await fileHandle.createWritable();
                     }

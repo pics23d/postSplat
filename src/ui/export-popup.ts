@@ -2,6 +2,7 @@ import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInp
 
 import { Pose } from '../camera-poses';
 import { i18n } from './localization';
+import { isDesktop } from '../desktop/bridge'; // [custom]
 import { Events } from '../events';
 import { ExportSettings } from '../export-settings';
 import { ExportType, SceneExportOptions } from '../file-handler';
@@ -68,7 +69,10 @@ class ExportPopup extends Container {
 
         super(args);
 
-        const hasFilePicker = !!window.showDirectoryPicker;
+        // [custom] desktop: the shell's native Save dialog picks folder and
+        // filename after this popup, so neither row is shown
+        const nativeDialogs = isDesktop();
+        const hasFilePicker = !nativeDialogs && !!window.showDirectoryPicker;
 
         // UI
 
@@ -592,6 +596,7 @@ class ExportPopup extends Container {
 
             directory = settings.directory;
             locationRow.hidden = !hasFilePicker;
+            filenameRow.hidden = nativeDialogs;
 
             filenameMessage.text = '';
             filenameMessage.hidden = true;

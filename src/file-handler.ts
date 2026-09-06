@@ -1,6 +1,8 @@
 import { path, Quat, Vec3 } from 'playcanvas';
 
 import type { Pose } from './camera-poses';
+import { isDesktop } from './desktop/bridge'; // [custom]
+import { desktopShowOpenFilePicker, desktopShowSaveFilePicker } from './desktop/desktop-file'; // [custom]
 import { CreateDropHandler } from './drop-handler';
 import { ElementType } from './element';
 import { Events } from './events';
@@ -475,21 +477,31 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             fileSelector.click();
         } else {
             try {
+                const importTypes = [
+                    allImportTypes,
+                    filePickerTypes.ply,
+                    filePickerTypes.compressedPly,
+                    filePickerTypes.splat,
+                    filePickerTypes.sog,
+                    filePickerTypes.lcc,
+                    filePickerTypes.ksplat,
+                    filePickerTypes.spz,
+                    filePickerTypes.indexTxt
+                ];
+
+                // [custom] desktop: native dialog defaulting to the last opened
+                // file's directory; the files load through their app:// urls
+                if (isDesktop()) {
+                    const handles = await desktopShowOpenFilePicker('import', { multiple: true, types: importTypes as any });
+                    importFiles(handles.map(handle => ({ filename: handle.name, url: handle.url })));
+                    return;
+                }
+
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileImport',
                     multiple: true,
                     excludeAcceptAllOption: false,
-                    types: [
-                        allImportTypes,
-                        filePickerTypes.ply,
-                        filePickerTypes.compressedPly,
-                        filePickerTypes.splat,
-                        filePickerTypes.sog,
-                        filePickerTypes.lcc,
-                        filePickerTypes.ksplat,
-                        filePickerTypes.spz,
-                        filePickerTypes.indexTxt
-                    ]
+                    types: importTypes
                 });
 
                 const files = [];
@@ -604,7 +616,10 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
     events.function('scene.export', async (exportType: ExportType) => {
         const splats = getSplats();
-        const hasFilePicker = !!window.showDirectoryPicker;
+        // [custom] desktop: the shell's native Save dialog (defaulting to the
+        // last export directory) replaces the folder picker + filename row
+        const nativeDialogs = isDesktop();
+        const hasFilePicker = !nativeDialogs && !!window.showDirectoryPicker;
 
         await exportSettingsReady;
         const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
@@ -622,7 +637,26 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     (exportType === 'sog') ? 'sog' :
                         (exportType === 'spz') ? 'spz' : 'splat';
 
-        if (hasFilePicker) {
+        if (nativeDialogs) {
+            // [custom] a failed write aborts the stream, which discards the
+            // shell's temp file (electron/files.ts)
+            try {
+                const fileHandle = await desktopShowSaveFilePicker('export', {
+                    types: [filePickerTypes[fileType]] as any,
+                    suggestedName: options.filename
+                });
+                await events.invoke('scene.write', fileType, options, await fileHandle.createWritable());
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error(error);
+                    await events.invoke('showPopup', {
+                        type: 'error',
+                        header: i18n.t('popup.error'),
+                        message: `${error.message ?? error}`
+                    });
+                }
+            }
+        } else if (hasFilePicker) {
             try {
                 let written = false;
                 try {

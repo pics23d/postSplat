@@ -1,6 +1,8 @@
 import { ZipFileSystem, ZipReadFileSystem } from '@playcanvas/splat-transform';
 import type { Asset, Quat } from 'playcanvas';
 
+import { isDesktop } from './desktop/bridge'; // [custom]
+import { desktopShowOpenFilePicker, desktopShowSaveFilePicker, isDesktopRecord, restoreDesktopHandle } from './desktop/desktop-file'; // [custom]
 import { decodeInstances, encodeInstances, restorePalettes } from './doc-instances';
 import type { EditorSplatResource } from './editor-splat-resource';
 import { Events } from './events';
@@ -440,11 +442,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             });
         } else {
             try {
-                const fileHandles = await window.showOpenFilePicker({
-                    id: 'SuperSplatDocumentOpen',
-                    multiple: false,
-                    types: SuperFileType
-                });
+                // [custom] desktop: native dialog defaulting to the last opened file's directory
+                const fileHandles = isDesktop() ?
+                    await desktopShowOpenFilePicker('document', { multiple: false, types: SuperFileType as any }) as unknown as FileSystemFileHandle[] :
+                    await window.showOpenFilePicker({
+                        id: 'SuperSplatDocumentOpen',
+                        multiple: false,
+                        types: SuperFileType
+                    });
 
                 if (fileHandles?.length === 1) {
                     const fileHandle = fileHandles[0];
@@ -471,6 +476,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         }
 
         try {
+            // [custom] desktop: the record holds a path, not a browser handle
+            if (isDesktop() && isDesktopRecord(fileHandle)) {
+                const restored = await restoreDesktopHandle(fileHandle);
+                if (!restored) {
+                    throw new Error(i18n.t('popup.error-loading'));
+                }
+                fileHandle = restored as unknown as FileSystemFileHandle;
+            }
             if (await fileHandle.queryPermission({ mode: 'read' }) !== 'granted') {
                 if (await fileHandle.requestPermission({ mode: 'read' }) !== 'granted') {
                     return false;
@@ -513,6 +526,23 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
     events.function('doc.saveAs', async () => {
         try {
+            // [custom] desktop: the shell's native Save dialog (defaulting to the
+            // last save directory, overwrite confirmed by the OS) replaces the
+            // folder + filename popup; the write itself goes through writeDocument
+            // like upstream, so saving over the open document rebinds it
+            if (isDesktop()) {
+                const handle = await desktopShowSaveFilePicker('save', {
+                    types: SuperFileType as any,
+                    suggestedName: events.invoke('doc.name') || 'scene.ssproj'
+                }) as unknown as FileSystemFileHandle;
+                if (!await writeDocument(handle)) return false;
+                documentFileHandle = handle;
+                events.fire('doc.setName', handle.name);
+                recentFiles.add(handle);
+                events.fire('doc.saved');
+                return;
+            }
+
             const hasFilePicker = !!window.showDirectoryPicker;
             const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
 

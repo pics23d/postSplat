@@ -14,18 +14,30 @@ import path from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } from 'electron';
 import type { MenuItemConstructorOptions } from 'electron';
 
+import { installFileIpc } from './files';
 import { installDevicePolicies } from './hid';
 import { appUrl, installAppProtocol, registerAppScheme, registerFile } from './protocol';
 
 const DIST_DIR = path.join(__dirname, '..', '..', 'dist');
 const ICON = path.join(DIST_DIR, 'static', 'icons', 'logo-512.png');
 const LOADABLE = new Set(['.ply', '.sog', '.spz', '.splat', '.ksplat', '.ssproj', '.json', '.txt', '.abc', '.zip']);
+const argValue = (name: string) => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3);
 // --log-file=<path> appends renderer console + shell diagnostics to a file
 // (stdout piping through npx/grep buffers; a file is what the harness reads).
-const LOG_FILE = process.argv.find(arg => arg.startsWith('--log-file='))?.slice('--log-file='.length) ?? process.env.SS_DESKTOP_LOG_FILE;
+const LOG_FILE = argValue('log-file') ?? process.env.SS_DESKTOP_LOG_FILE;
 const LOG_RENDERER = process.argv.includes('--enable-logging') || !!process.env.SS_DESKTOP_LOG || !!LOG_FILE;
+// harness: --user-data-dir=<dir> keeps test runs away from the user's state,
+// --test-dir=<dir> / --test-open=<a;b> replace the native file dialogs (files.ts)
+const USER_DATA_DIR = argValue('user-data-dir');
+const TEST_DIR = argValue('test-dir');
+const TEST_OPEN = argValue('test-open')?.split(';').filter(Boolean);
+
+if (USER_DATA_DIR) {
+    app.setPath('userData', path.resolve(USER_DATA_DIR));
+}
 
 let mainWindow: BrowserWindow | null = null;
+let noteOpened: (files: string[]) => void = () => {};
 
 const isHttpUrl = (url: string) => /^https?:\/\//i.test(url);
 
@@ -48,6 +60,7 @@ const collectFileArgs = (argv: string[]) => {
 };
 
 const loadUrlFor = (files: string[]) => {
+    noteOpened(files);
     const url = new URL(appUrl('/'));
     for (const file of files) {
         const entry = registerFile(file);
@@ -276,6 +289,7 @@ if (!app.requestSingleInstanceLock()) {
 
         const files = collectFileArgs(argv.map(arg => (path.isAbsolute(arg) ? arg : path.join(workingDirectory, arg))));
         if (files.length) {
+            noteOpened(files);
             mainWindow.webContents.send('ss:open-files', files.map(registerFile));
         }
     });
@@ -284,6 +298,13 @@ if (!app.requestSingleInstanceLock()) {
         installAppProtocol(DIST_DIR);
         installDevicePolicies(session.defaultSession, appUrl(''));
         registerIpc();
+        noteOpened = installFileIpc({
+            storageFile: path.join(app.getPath('userData'), 'file-dirs.json'),
+            getWindow: () => mainWindow,
+            log,
+            testDir: TEST_DIR,
+            testOpen: TEST_OPEN
+        }).noteOpened;
         mainWindow = createWindow(collectFileArgs(process.argv));
 
         app.on('activate', () => {

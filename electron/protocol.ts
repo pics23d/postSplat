@@ -78,15 +78,21 @@ export const appUrl = (pathname = '/') => `${APP_SCHEME}://${APP_HOST}${pathname
 // explicitly registered paths are reachable, as app://editor/__file/<id>/<name>.
 const FILE_PREFIX = '/__file/';
 const registeredFiles = new Map<string, string>();
+const registeredPaths = new Set<string>();
 
 export const registerFile = (absolutePath: string) => {
     const id = String(registeredFiles.size);
-    registeredFiles.set(id, path.resolve(absolutePath));
+    const resolved = path.resolve(absolutePath);
+    registeredFiles.set(id, resolved);
+    registeredPaths.add(resolved);
     return {
         filename: path.basename(absolutePath),
         url: appUrl(`${FILE_PREFIX}${id}/${encodeURIComponent(path.basename(absolutePath))}`)
     };
 };
+
+// the write side (electron/files.ts) trusts exactly the paths handed out here
+export const isRegisteredPath = (absolutePath: string) => registeredPaths.has(path.resolve(absolutePath));
 
 const resolveRequestPath = (root: string, pathname: string): string | null => {
     let rel = decodeURIComponent(pathname);
