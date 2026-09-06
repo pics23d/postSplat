@@ -23,6 +23,7 @@
 @use 'timeline-panel.scss';
 @use 'status-bar.scss';
 @use 'tool.scss';
+@use 'hint-overlay.scss'; // [custom]
 
 * {
     font-size: 12px;

@@ -9,4 +9,11 @@ const opFromModifiers = (e: { shiftKey: boolean; ctrlKey: boolean }) => {
     return 'add';
 };
 
-export { opFromModifiers };
+// [custom] the tools whose gestures go through the modifier mapping above;
+// shared by the Esc handling (ToolManager) and the context hint overlay
+const SELECTION_TOOLS = new Set([
+    'rectSelection', 'brushSelection', 'lassoSelection', 'polygonSelection',
+    'sphereBrushSelection', 'floodSelection', 'eyedropperSelection'
+]);
+
+export { opFromModifiers, SELECTION_TOOLS };

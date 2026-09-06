@@ -1,6 +1,7 @@
 import type { Vec3 } from 'playcanvas';
 
 import { Events } from '../events';
+import { SELECTION_TOOLS } from '../select-op';
 
 interface Tool {
     activate: () => void;
@@ -24,6 +25,17 @@ class ToolManager {
 
         this.events.on('tool.deactivate', () => {
             this.activate(null);
+        });
+
+        // [custom] Esc (user CR 2026-09-06): while a selection tool is active
+        // it clears the selection and keeps the tool; otherwise it deactivates
+        // the tool as upstream did
+        this.events.on('tool.escape', () => {
+            if (this.active && SELECTION_TOOLS.has(this.active)) {
+                this.events.fire('select.none');
+            } else {
+                this.activate(null);
+            }
         });
 
         this.events.function('tool.active', () => {

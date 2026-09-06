@@ -197,8 +197,9 @@ class SphereBrushSelection {
             }
         };
 
+        // [custom] Shift+wheel (upstream: Alt/Meta+wheel), see brush-selection.ts
         const wheel = (e: WheelEvent) => {
-            if (e.altKey || e.metaKey) {
+            if (e.shiftKey && !e.ctrlKey && !e.altKey) {
                 const { deltaX, deltaY } = e;
                 events.fire((Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
                 e.preventDefault();
@@ -234,7 +235,7 @@ class SphereBrushSelection {
         };
 
         // share the 2d brush's size events so the [ and ] shortcuts (and
-        // alt+wheel) adjust whichever brush is active
+        // shift+wheel) adjust whichever brush is active
         events.on('tool.brushSelection.smaller', () => {
             radius = Math.max(1, radius / 1.05);
             circle.setAttribute('r', radius.toString());

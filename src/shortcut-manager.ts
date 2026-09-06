@@ -53,7 +53,9 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.eyedropperSelection': { keys: ['e'], ctrl: 'required', capture: true },
     'tool.brushSelection.smaller': { keys: ['['], repeat: true },
     'tool.brushSelection.bigger': { keys: [']'], repeat: true },
-    'tool.deactivate': { keys: ['Escape'] },
+    // [custom] Esc clears the selection while a selection tool is active,
+    // otherwise deactivates the tool (see ToolManager 'tool.escape')
+    'tool.escape': { keys: ['Escape'] },
     'tool.toggleCoordSpace': { keys: ['c'], shift: 'required' },
 
     // Other

@@ -1,0 +1,56 @@
+@use 'colors.scss' as *;
+
+// [custom] context hints (src/ui/hint-overlay.ts), bottom-left of the viewport.
+// pointer-events: none so drags and clicks starting over it still reach the canvas
+#hint-overlay {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    pointer-events: none;
+
+    .hint-section {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.45);
+
+        &.pcui-hidden {
+            display: none;
+        }
+    }
+
+    .hint-title {
+        color: $text-secondary;
+        font-size: 11px;
+        letter-spacing: 1px;
+        margin-bottom: 2px;
+    }
+
+    .hint-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+
+        &.pcui-hidden {
+            display: none;
+        }
+    }
+
+    .hint-keys {
+        min-width: 96px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background-color: $bcg-primary;
+        color: $text-primary;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .hint-action {
+        color: $text-secondary;
+        white-space: nowrap;
+    }
+}

@@ -10,6 +10,7 @@ import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
 import { CameraInfoOverlay } from './camera-info-overlay';
 import { ExportPopup } from './export-popup';
+import { HintOverlay } from './hint-overlay'; // [custom]
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { i18n } from './localization';
 import { Menu } from './menu';
@@ -118,6 +119,7 @@ class EditorUI {
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(annotationContainer);
         canvasContainer.append(appLabel);
+        canvasContainer.append(new HintOverlay(events)); // [custom] bottom-left context hints
         canvasContainer.append(cameraInfoOverlay);
         canvasContainer.append(perfOverlay);
         canvasContainer.append(toolsContainer);

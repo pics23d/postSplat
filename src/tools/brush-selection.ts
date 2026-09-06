@@ -138,8 +138,11 @@ class BrushSelection {
             }
         };
 
+        // [custom] Shift+wheel (upstream: Alt/Meta+wheel) so Alt+wheel keeps
+        // moving the depth selection plane while a brush is active. Shift
+        // may remap a vertical wheel to deltaX, hence the larger-axis pick
         const wheel = (e: WheelEvent) => {
-            if (e.altKey || e.metaKey) {
+            if (e.shiftKey && !e.ctrlKey && !e.altKey) {
                 const { deltaX, deltaY } = e;
                 events.fire((Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
                 e.preventDefault();
