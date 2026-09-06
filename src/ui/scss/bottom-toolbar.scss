@@ -111,6 +111,31 @@
     }
 }
 
+// [custom] depth selection far-plane control, floating above the depth toggle
+// while it is on (positioned from bottom-toolbar.ts)
+.depth-panel {
+    position: absolute;
+    height: 38px;
+    padding: 0px 10px;
+    border-radius: 8px;
+    background-color: $bcg-primary;
+    align-items: center;
+
+    &:not(.pcui-hidden) {
+        display: flex;
+    }
+
+    > .depth-panel-slider {
+        width: 240px;
+        margin: 0px;
+
+        > .pcui-slider-container > .pcui-slider-bar > .pcui-slider-handle {
+            background-color: $clr-default;
+            border-radius: 3px;
+        }
+    }
+}
+
 .bottom-toolbar-toggle.active {
     &::before {
         color: $clr-hilight;

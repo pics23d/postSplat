@@ -230,6 +230,28 @@ class SettingsPanel extends Container {
         cameraFlySpeedRow.append(cameraFlySpeedLabel);
         cameraFlySpeedRow.append(cameraFlySpeedSlider);
 
+        // [custom] depth selection: brightness of splats beyond the far plane (0 = black)
+
+        const depthFadeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const depthFadeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(depthFadeLabel, 'panel.settings.depth-fade');
+
+        const depthFadeSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 1,
+            precision: 2,
+            value: 0.25
+        });
+
+        depthFadeRow.append(depthFadeLabel);
+        depthFadeRow.append(depthFadeSlider);
+
         // stochastic alpha
 
         const stochasticRow = new Container({
@@ -387,6 +409,7 @@ class SettingsPanel extends Container {
         this.append(cameraFlySpeedRow);
         this.append(fovRow);
         this.append(fovDollyRow);
+        this.append(depthFadeRow); // [custom]
         // [custom]
         this.append(sectionHeader('panel.settings.section-spacemouse'));
         this.append(spaceMouseStatusRow);
@@ -477,6 +500,16 @@ class SettingsPanel extends Container {
 
         fovSlider.on('change', (value: number) => {
             events.fire('camera.setFov', value);
+        });
+
+        // [custom] depth selection fade
+
+        events.on('selection.depthFade', (value: number) => {
+            depthFadeSlider.value = value;
+        });
+
+        depthFadeSlider.on('change', (value: number) => {
+            events.fire('selection.setDepthFade', value);
         });
 
         // tonemapping

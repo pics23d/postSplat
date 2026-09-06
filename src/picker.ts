@@ -116,7 +116,8 @@ class Picker {
         // Set picker uniforms
         this.device.scope.resolve('pickOp').setValue(pickOpIndex);
         this.device.scope.resolve('pickMode').setValue(0);
-        this.scene.projectedSplatRenderer.preparePick(splat, pickOpIndex, false);
+        // [custom] id picks serve selection only: splats beyond the depth selection plane are skipped
+        this.scene.projectedSplatRenderer.preparePick(splat, pickOpIndex, false, true);
 
         // Render ID picking pass
         const emptyMap = new Map();
@@ -187,8 +188,10 @@ class Picker {
         return result;
     }
 
-    // Prepare for depth picking by rendering the specified splat
-    prepareDepth(splat: Splat) {
+    // Prepare for depth picking by rendering the specified splat.
+    // [custom] depthGate: skip splats beyond the depth selection far plane
+    // (sphere brush); the focus pick leaves it off
+    prepareDepth(splat: Splat, depthGate = false) {
         if (!this.depthRenderTarget) {
             return;
         }
@@ -206,7 +209,7 @@ class Picker {
         // Set depth estimation mode uniform
         this.device.scope.resolve('pickOp').setValue(2); // 'set' mode - don't skip any visible splats
         this.device.scope.resolve('pickMode').setValue(1);
-        scene.projectedSplatRenderer.preparePick(splat, 2, true);
+        scene.projectedSplatRenderer.preparePick(splat, 2, true, depthGate);
 
         // Render scene with depth pass
         this.renderPass.blendState = this.depthBlendState;

@@ -65,7 +65,9 @@ type SphereBrushOptions = {
     sphereBrush: { points: Float32Array, mask: Texture, footprint?: number, projection?: Mat4, view?: Mat4 };
 };
 
-type IntersectOptions = MaskOptions | RectOptions | SphereOptions | BoxOptions | SphereBrushOptions;
+// [custom] depthFar: view-space far plane of the depth selection (0 = off);
+// splats whose center lies beyond it never intersect, in any mode
+type IntersectOptions = (MaskOptions | RectOptions | SphereOptions | BoxOptions | SphereBrushOptions) & { depthFar?: number };
 
 const shapeInvMat = new Mat4();
 const identityMat = new Mat4();
@@ -86,7 +88,10 @@ struct Uniforms {
     pathBoundsMin: vec4f,
     pathBoundsMax: vec4f,
     shapeInverse: mat4x4f,
-    footprint: f32
+    footprint: f32,
+    // [custom] depth selection: camera view matrix and far plane (0 = off)
+    view: mat4x4f,
+    depthFar: f32
 }
 
 @group(0) @binding(0) var<storage, read_write> result: array<u32>;
@@ -180,6 +185,10 @@ fn intersects(index: u32) -> bool {
     let paletteIndex = instancePalette[index] & 0xffffu;
     let toWorld = uniforms.model * paletteMatrix(paletteIndex);
     let world = (toWorld * vec4f(center, 1.0)).xyz;
+    // [custom] beyond the depth selection far plane: never selected
+    if (uniforms.depthFar > 0.0 && -(uniforms.view * vec4f(world, 1.0)).z > uniforms.depthFar) {
+        return false;
+    }
     // the on-screen stroke mask gates the sphere brush only at footprint 0:
     // with a footprint, splats whose extent grazes the brushed volume count
     // even where their center projects outside the stroke (or off screen)
@@ -288,7 +297,9 @@ class Intersect {
             new UniformFormat('pathBoundsMin', UNIFORMTYPE_VEC4),
             new UniformFormat('pathBoundsMax', UNIFORMTYPE_VEC4),
             new UniformFormat('shapeInverse', UNIFORMTYPE_MAT4),
-            new UniformFormat('footprint', UNIFORMTYPE_FLOAT)
+            new UniformFormat('footprint', UNIFORMTYPE_FLOAT),
+            new UniformFormat('view', UNIFORMTYPE_MAT4), // [custom]
+            new UniformFormat('depthFar', UNIFORMTYPE_FLOAT) // [custom]
         ]);
         this.bindGroupFormat = new BindGroupFormat(device, [
             new BindStorageBufferFormat('result', SHADERSTAGE_COMPUTE),
@@ -383,6 +394,9 @@ class Intersect {
         this.compute.setParameter('pathBoundsMax', pathBoundsMax);
         this.compute.setParameter('shapeInverse', shapeInverse.data);
         this.compute.setParameter('footprint', sphere?.footprint ?? box?.footprint ?? sphereBrush?.footprint ?? 0);
+        // [custom] the far plane is measured in the same camera frame as the mask gate
+        this.compute.setParameter('view', (sphereBrush?.view ?? camera.viewMatrix).data);
+        this.compute.setParameter('depthFar', options.depthFar ?? 0);
         Compute.calcDispatchSize(Math.ceil(outputWords / WORKGROUP_SIZE), this.dispatchSize);
         this.compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
         this.device.computeDispatch([this.compute], 'intersect');

@@ -75,6 +75,7 @@
     "panel.settings.fov-dolly": "Авто-долли FOV",
     "panel.settings.sh-bands": "Полосы SH",
     "panel.settings.fly-speed": "Скорость полёта",
+    "panel.settings.depth-fade": "Затухание выбора по глубине",
     "panel.settings.stochastic-alpha": "Стохастическая альфа",
     "panel.settings.stochastic-alpha.disabled": "Отключено",
     "panel.settings.stochastic-alpha.enabled": "Включено",

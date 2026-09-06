@@ -117,7 +117,11 @@ struct ProjectorUniforms {
     minPixelSize: f32,
     // camera clip planes, used to linearly normalize view depth for the sort key
     near: f32,
-    far: f32
+    far: f32,
+    // [custom] depth selection far plane in view depth; 0 = off. Splats beyond
+    // it are flagged (cacheB bit 26) so the render shader fades them and the
+    // selection passes skip them
+    depthFar: f32
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
@@ -364,6 +368,7 @@ fn main(
             | (u32(clamp(color.a, 0.0, 1.0) * 255.0 + 0.5) << 16u)
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
+            | select(0u, 0x04000000u, uniforms.depthFar > 0.0 && depth > uniforms.depthFar)
     ));
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice

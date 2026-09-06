@@ -32,6 +32,9 @@ type SplatValueOptions = {
     cameraPos?: Vec3;
     onScreenOnly?: boolean;
     logBins?: boolean;
+    // [custom] depth selection far plane in view depth (0 = off); consumed by
+    // the color match kernel, ignored by the histogram passes
+    depthFar?: number;
 };
 
 const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBufferFormat(device, [
@@ -51,7 +54,8 @@ const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBuf
     new UniformFormat('rangeStart', UNIFORMTYPE_INT),
     new UniformFormat('rangeEnd', UNIFORMTYPE_INT),
     new UniformFormat('colorMatchIndex', UNIFORMTYPE_UINT),
-    new UniformFormat('colorMatchThreshold', UNIFORMTYPE_FLOAT)
+    new UniformFormat('colorMatchThreshold', UNIFORMTYPE_FLOAT),
+    new UniformFormat('depthFar', UNIFORMTYPE_FLOAT) // [custom]
 ]);
 
 const createSplatValueTextureFormats = (bands: number) => {
@@ -128,6 +132,7 @@ const setSplatValueParameters = (
     compute.setParameter('rangeEnd', rangeEnd);
     compute.setParameter('colorMatchIndex', 0);
     compute.setParameter('colorMatchThreshold', 0);
+    compute.setParameter('depthFar', options?.depthFar ?? 0);
 };
 
 export {

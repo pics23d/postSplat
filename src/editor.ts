@@ -420,12 +420,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // per-pixel id pick (frontmost wins, op-aware peeling); depth off -> the
     // centers intersect at footprint 0, otherwise the footprint pass, which
     // tests each splat's projected ellipse against the region through all depths
-    const selectionMethod = () => {
-        if (events.invoke('selection.useDepth')) {
-            return 'pick';
-        }
+    const selectionMethod = (): 'pick' | 'footprint' | 'centers' => {
+        // [custom] the depth toggle is a view-space far plane now (see
+        // selection.effectiveDepthFar): gestures always run through all layers
+        // and the plane gates them, so the per-pixel 'pick' path is unreachable
         return (events.invoke('selection.footprint') as number) > 0 ? 'footprint' : 'centers';
     };
+
+    // [custom] far plane snapshot for a gesture: 0 = no plane. Taken before any
+    // await so a toggle mid-flight can't change a finished stroke's semantics
+    const depthFarSnapshot = () => events.invoke('selection.effectiveDepthFar') as number;
 
     type SelectRegion = { y0: number, y1: number, intervals: Uint32Array };
 
@@ -559,18 +563,22 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // transform maps the unit sphere (diameter 1) to world space
     events.on('select.bySphere', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
+        const depthFar = depthFarSnapshot();
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                sphere: { transform, footprint: events.invoke('selection.footprint') as number }
+                sphere: { transform, footprint: events.invoke('selection.footprint') as number },
+                depthFar
             });
         }
     });
 
     // transform maps the unit cube (side 1) to world space
     events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
+        const depthFar = depthFarSnapshot();
         for (const splat of selectedSplats()) {
             await runSelectIntersect(splat, op, {
-                box: { transform, footprint: events.invoke('selection.footprint') as number }
+                box: { transform, footprint: events.invoke('selection.footprint') as number },
+                depthFar
             });
         }
     });
@@ -578,11 +586,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.function('select.rect', async (op: 'add'|'remove'|'set'|'intersect', rect: any) => {
         const method = selectionMethod();
         const footprint = events.invoke('selection.footprint') as number;
+        const depthFar = depthFarSnapshot();
 
         for (const splat of selectedSplats()) {
             if (method === 'centers') {
                 await runSelectIntersect(splat, op, {
-                    rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y }
+                    rect: { x1: rect.start.x, y1: rect.start.y, x2: rect.end.x, y2: rect.end.y },
+                    depthFar
                 });
             } else if (method === 'footprint') {
                 await runFootprintSelect(splat, op, rectRegion(rect.start.x, rect.start.y, rect.end.x, rect.end.y), footprint);
@@ -633,12 +643,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const region = method === 'footprint' ? maskRegion(context, canvas.width, canvas.height) : null;
         const maskPixels = method === 'pick' ? context.getImageData(0, 0, canvas.width, canvas.height) : null;
         const footprint = events.invoke('selection.footprint') as number;
+        const depthFar = depthFarSnapshot();
 
         try {
             for (const splat of selectedSplats()) {
                 if (method === 'centers') {
                     await runSelectIntersect(splat, op, {
-                        mask: maskTexture
+                        mask: maskTexture,
+                        depthFar
                     });
                 } else if (method === 'footprint') {
                     await runFootprintSelect(splat, op, region, footprint);
@@ -723,6 +735,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const projection = scene.camera.camera.projectionMatrix.clone();
         const view = scene.camera.camera.viewMatrix.clone();
         const footprint = events.invoke('selection.footprint') as number;
+        const depthFar = depthFarSnapshot();
         const pixelScale = scene.camera.worldSizePerPixel(1);
         const ortho = scene.camera.ortho;
         const pose = {
@@ -740,7 +753,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         // going through runSelectIntersect because nesting enqueues deadlocks.
         try {
             await scene.commandQueue.enqueue(async () => {
-                const hits = await scene.camera.intersectMany(points, splats, pose);
+                // [custom] the brush lands on the surface inside the far plane
+                const hits = await scene.camera.intersectMany(points, splats, pose, depthFar > 0);
                 const path: number[] = [];
                 let previous: { position: Vec3, radius: number } | null = null;
 
@@ -760,7 +774,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 const pathPoints = new Float32Array(path);
                 for (const splat of splats) {
                     const data = await scene.dataProcessor.intersect({
-                        sphereBrush: { points: pathPoints, mask, footprint, projection, view }
+                        sphereBrush: { points: pathPoints, mask, footprint, projection, view },
+                        depthFar
                     }, splat);
                     // SelectOp consumes `data` synchronously in its constructor
                     events.fire('edit.add', new SelectOp(splat, op, data));
@@ -776,6 +791,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const { width, height } = scene.targetSize;
         const method = selectionMethod();
         const footprint = events.invoke('selection.footprint') as number;
+        const depthFar = depthFarSnapshot();
 
         for (const splat of selectedSplats()) {
             if (method === 'centers') {
@@ -785,7 +801,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         y1: point.y,
                         x2: point.x + 1 / width,
                         y2: point.y + 1 / height
-                    }
+                    },
+                    depthFar
                 });
             } else if (method === 'footprint') {
                 await runFootprintSelect(splat, op, rectRegion(
@@ -831,6 +848,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const nx = Math.max(0, Math.min(1, point.x));
         const ny = Math.max(0, Math.min(1, point.y));
         const colorThreshold = Math.min(1, Math.max(0, Number.isFinite(threshold) ? threshold : 0));
+        // [custom] far plane: gates the reference pick (pickPrep) and the match kernel
+        const depthFar = depthFarSnapshot();
+        const viewMatrix = scene.camera.camera.viewMatrix.clone();
 
         for (const splat of splats) {
             scene.camera.pickPrep(splat, 'set');
@@ -847,7 +867,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             await scene.commandQueue.enqueue(async () => {
                 const mask = await scene.dataProcessor.colorMatch(splat, pickId, colorThreshold, {
                     entityMatrix: splat.entity.getWorldTransform(),
-                    cameraPos: scene.camera.position
+                    cameraPos: scene.camera.position,
+                    viewMatrix,
+                    depthFar
                 });
                 events.fire('edit.add', new SelectOp(splat, op, mask));
                 scene.dataProcessor.releaseMask(mask);
@@ -1022,12 +1044,66 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('selection.setUseDepth', (value: boolean) => {
         if (value !== selectionUseDepth) {
             selectionUseDepth = value;
+            scene.forceRender = true; // [custom] the far-plane fade is a render state
             events.fire('selection.useDepth', value);
         }
     });
 
     events.on('selection.toggleUseDepth', () => {
         events.fire('selection.setUseDepth', !selectionUseDepth);
+    });
+
+    // [custom] depth selection = a far plane at a view-space distance from the
+    // camera (the toggle above enables it). Splats beyond the plane render darkened
+    // (colour × depthFade) and are never selected by viewport tools. depthFar 0 = unset: the plane
+    // then sits at the camera's focal distance and follows the zoom until the
+    // user sets a value (slider, Alt+wheel), which freezes it.
+    let selectionDepthFar = 0;
+    let selectionDepthFade = 0.25;
+
+    events.function('selection.depthFar', () => selectionDepthFar);
+
+    events.function('selection.effectiveDepthFar', () => {
+        if (!selectionUseDepth) {
+            return 0;
+        }
+        return selectionDepthFar > 0 ? selectionDepthFar : scene.camera.focalDistance;
+    });
+
+    events.on('selection.setDepthFar', (value: number) => {
+        const next = Number.isFinite(value) && value > 0 ? Math.max(1e-3, value) : 0;
+        if (next !== selectionDepthFar) {
+            selectionDepthFar = next;
+            scene.forceRender = true;
+            events.fire('selection.depthFar', next);
+        }
+    });
+
+    // Alt+wheel: ±5% per notch, from the effective plane so the first notch
+    // moves the focal-distance default instead of jumping from 0
+    events.on('selection.stepDepthFar', (notches: number) => {
+        const current = events.invoke('selection.effectiveDepthFar') as number;
+        if (current > 0 && notches) {
+            events.fire('selection.setDepthFar', current * (1.05 ** -notches));
+        }
+    });
+
+    events.function('selection.depthFade', () => selectionDepthFade);
+
+    events.on('selection.setDepthFade', (value: number) => {
+        const next = Math.min(1, Math.max(0, value));
+        if (next !== selectionDepthFade) {
+            selectionDepthFade = next;
+            scene.forceRender = true;
+            events.fire('selection.depthFade', next);
+        }
+    });
+
+    // a new document starts with the plane back at the focal distance
+    events.on('scene.elementRemoved', (element: Element) => {
+        if (element.type === ElementType.splat && scene.getElementsByType(ElementType.splat).length === 0) {
+            events.fire('selection.setDepthFar', 0);
+        }
     });
 
     events.function('selection.footprint', () => selectionFootprint);

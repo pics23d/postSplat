@@ -753,7 +753,8 @@ class Camera extends Element {
     async intersectMany(
         points: { x: number, y: number }[],
         splats = this.scene.getElementsByType(ElementType.splat) as Splat[],
-        pose?: { position: Vec3, rotation: Quat, orthoHeight: number, near: number, far: number }
+        pose?: { position: Vec3, rotation: Quat, orthoHeight: number, near: number, far: number },
+        depthGate = false // [custom] skip splats beyond the depth selection far plane
     ) {
         const { scene } = this;
         const closestDepths = points.map(() => Infinity);
@@ -815,7 +816,7 @@ class Camera extends Element {
 
             withSnapshotCamera(() => {
                 scene.projectedSplatRenderer.renderSortedForPick();
-                this.picker.prepareDepth(splat);
+                this.picker.prepareDepth(splat, depthGate);
             });
             const depths = await this.picker.readDepths(points);
             for (let j = 0; j < depths.length; ++j) {

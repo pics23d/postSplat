@@ -76,6 +76,10 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numW
     for (var channel = 0u; channel < 4u; channel++) {
         var splat: SplatValue;
         if (readSplat(first + channel, &splat)) {
+            // [custom] beyond the depth selection far plane: never selected
+            if (uniforms.depthFar > 0.0 && -(uniforms.viewMatrix * vec4f(splat.worldPos, 1.0)).z > uniforms.depthFar) {
+                continue;
+            }
             let color = clamp(readFinalColor(splat), vec3f(0.0), vec3f(1.0));
             let difference = abs(color - referenceColor);
             if (all(difference <= vec3f(uniforms.colorMatchThreshold))) {

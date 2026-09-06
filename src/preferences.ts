@@ -108,6 +108,8 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         // this table and has already been applied when they are evaluated
         { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
         { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
+        // [custom] colour multiplier (0 = black) for splats beyond the depth selection far plane (the plane itself is session state)
+        { key: 'selection.depthFade', setCommand: 'selection.setDepthFade', getDefault: () => 0.25, validate: isNumber(0, 1), group: 'preferences' },
         { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool, group: 'appearance' },
         { key: 'view.centers', setCommand: 'view.setCenters', getDefault: () => (events.invoke('selection.footprint') as number) === 0, validate: isBool, group: 'appearance' },
         { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => (events.invoke('selection.footprint') as number) > 0, validate: isBool, group: 'appearance' },

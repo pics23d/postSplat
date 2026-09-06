@@ -75,6 +75,7 @@
     "panel.settings.fov-dolly": "FOV 자동 달리",
     "panel.settings.sh-bands": "SH 밴드",
     "panel.settings.fly-speed": "카메라 이동 속도",
+    "panel.settings.depth-fade": "깊이 선택 페이드",
     "panel.settings.stochastic-alpha": "확률적 알파",
     "panel.settings.stochastic-alpha.disabled": "비활성",
     "panel.settings.stochastic-alpha.enabled": "활성",

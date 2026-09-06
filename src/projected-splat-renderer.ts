@@ -210,6 +210,9 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickMode', 0);
         this.material.setParameter('pickFootprint', 1);
         this.material.setParameter('cameraParams', [0, 1, 0, 0]);
+        // [custom] depth selection far plane (see selection.effectiveDepthFar)
+        this.material.setParameter('depthFade', 1);
+        this.material.setParameter('depthGate', 0);
         this.material.update();
 
         this.mesh = createQuadMesh(this.device);
@@ -275,7 +278,9 @@ class ProjectedSplatRenderer {
         this.render(true);
     }
 
-    preparePick(splat: Splat, pickOp: number, depth: boolean) {
+    // [custom] depthGate: skip splats beyond the depth selection far plane
+    // (selection picks); off for the focus pick so a faded object can still be focused
+    preparePick(splat: Splat, pickOp: number, depth: boolean, depthGate = false) {
         if (this.drawSlot >= 0) {
             this.meshInstance.setIndirect(null, this.drawSlot, 1);
         }
@@ -284,6 +289,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickCount', placement?.count ?? 0);
         this.material.setParameter('pickOp', pickOp);
         this.material.setParameter('pickMode', depth ? 1 : 0);
+        this.material.setParameter('depthGate', depthGate ? 1 : 0);
         // id picks select by the footprint value when it is fractional. At 0
         // (centers mode) the id pass is the full-size occlusion surface for the
         // visibility compute, and depth estimation always uses true footprints,
@@ -298,6 +304,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('pickMode', 0);
         this.material.setParameter('pickFootprint', 1);
+        this.material.setParameter('depthGate', 0);
     }
 
     // Switch between the default sorted premultiplied-alpha renderer and the
@@ -364,7 +371,8 @@ class ProjectedSplatRenderer {
             new UniformFormat('pickOp', UNIFORMTYPE_INT),
             new UniformFormat('minPixelSize', UNIFORMTYPE_FLOAT),
             new UniformFormat('near', UNIFORMTYPE_FLOAT),
-            new UniformFormat('far', UNIFORMTYPE_FLOAT)
+            new UniformFormat('far', UNIFORMTYPE_FLOAT),
+            new UniformFormat('depthFar', UNIFORMTYPE_FLOAT) // [custom]
         ]);
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
@@ -624,6 +632,9 @@ class ProjectedSplatRenderer {
         const viewBands = events.invoke('view.bands') as number;
         // Size culling is visual only: selection and depth queries need every footprint.
         const minPixelSize = forPick ? 0 : (events.invoke('view.minPixelSize') as number) ?? 0;
+        // [custom] depth selection far plane (0 = off) and the fade beyond it
+        const depthFar = (events.invoke('selection.effectiveDepthFar') as number) ?? 0;
+        const depthFade = (events.invoke('selection.depthFade') as number) ?? 1;
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
@@ -712,6 +723,7 @@ class ProjectedSplatRenderer {
             compute.setParameter('minPixelSize', minPixelSize);
             compute.setParameter('near', cameraComponent.nearClip);
             compute.setParameter('far', cameraComponent.farClip);
+            compute.setParameter('depthFar', depthFar);
 
             const workgroups = Math.ceil(placement.entryCapacity / WORKGROUP_SIZE);
             Compute.calcDispatchSize(workgroups, this.dispatchSize);
@@ -769,6 +781,7 @@ class ProjectedSplatRenderer {
             2 / targetSize.height
         ]);
         this.material.setParameter('outlineMode', outlineSelection ? 1 : 0);
+        this.material.setParameter('depthFade', depthFade);
         // the edit view switch (tab) shows the raw scene: gaussians render
         // regardless of the profile flag and the non-selection rings hide
         const editView = events.invoke('view.editView');

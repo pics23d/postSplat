@@ -297,6 +297,14 @@ class PointerController {
             const isPinch = (event.ctrlKey && !ctrlDown) || event.metaKey;
             const isOrbit = event.ctrlKey && ctrlDown;
 
+            // [custom] Alt+wheel slides the depth selection far plane (wheel up =
+            // farther, ±5% per notch); see selection.stepDepthFar in editor.ts
+            if (event.altKey && camera.scene.events.invoke('selection.useDepth')) {
+                camera.scene.events.fire('selection.stepDepthFar', Math.sign(wheelDelta));
+                event.preventDefault();
+                return;
+            }
+
             if (camera.controlMode === 'fly') {
                 if (isOrbit) {
                     look(deltaX, deltaY);

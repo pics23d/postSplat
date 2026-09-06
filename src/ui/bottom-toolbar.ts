@@ -1,4 +1,4 @@
-import { Button, Element, Container } from '@playcanvas/pcui';
+import { Button, Element, Container, SliderInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -222,6 +222,28 @@ class BottomToolbar extends Container {
         selectionMode.dom.appendChild(depthOnIcon);
         selectionMode.dom.appendChild(depthOffIcon);
 
+        // [custom] depth selection = a far plane at a view-space distance from the
+        // camera. While the toggle is on, a slider + numeric field for that
+        // distance floats above the button (Alt+wheel in the viewport steps it too)
+        const depthPanel = new Container({
+            id: 'bottom-toolbar-depth-panel',
+            class: 'depth-panel',
+            hidden: true
+        });
+        // the slider spans the close-up retouching range (user decision
+        // 2026-09-06); the numeric field stays unbounded for the rare far plane
+        const depthSlider = new SliderInput({
+            class: 'depth-panel-slider',
+            min: 0.001,
+            sliderMin: 1,
+            sliderMax: 100,
+            step: 0.1,
+            precision: 2,
+            value: 1
+        });
+        depthPanel.append(depthSlider);
+        this.append(depthPanel);
+
         // footprint toggle: centers (footprint 0) or the full splat footprint
         const footprintMode = new Button({
             id: 'bottom-toolbar-selection-footprint',
@@ -393,12 +415,77 @@ class BottomToolbar extends Container {
         let useDepth = false;
         let footprint = 0;
 
+        // [custom] far-plane panel: above the depth button, clearing the active
+        // tool's own toolbar like the tool group popups do
+        const positionDepthPanel = () => {
+            const rect = selectionMode.dom.getBoundingClientRect();
+            const parentRect = this.dom.getBoundingClientRect();
+            const toolbar = document.querySelector('.select-toolbar:not(.pcui-hidden)');
+            const top = Math.min(rect.top, toolbar?.getBoundingClientRect().top ?? rect.top);
+            depthPanel.dom.style.left = `${rect.left - parentRect.left}px`;
+            depthPanel.dom.style.bottom = `${parentRect.bottom - top + 8}px`;
+        };
+
+        // programmatic sets must not read back as user edits: an unset plane
+        // follows the focal distance, and echoing that value would freeze it
+        let depthSyncing = false;
+        const syncDepthPanel = () => {
+            if (depthPanel.hidden) {
+                return;
+            }
+            const value = events.invoke('selection.effectiveDepthFar') as number;
+            depthSyncing = true;
+            if (value > 0) {
+                depthSlider.value = value;
+            }
+            depthSyncing = false;
+        };
+
+        depthSlider.on('change', (value: number) => {
+            if (!depthSyncing) {
+                events.fire('selection.setDepthFar', value);
+            }
+        });
+
+        // an unset plane tracks the camera; poll while the panel is showing
+        let depthTimer = -1;
+        const updateDepthPanel = (visible: boolean) => {
+            depthPanel.hidden = !visible;
+            if (visible) {
+                positionDepthPanel();
+                syncDepthPanel();
+                if (depthTimer === -1) {
+                    depthTimer = window.setInterval(() => {
+                        if ((events.invoke('selection.depthFar') as number) <= 0) {
+                            syncDepthPanel();
+                        }
+                    }, 250);
+                }
+            } else if (depthTimer !== -1) {
+                clearInterval(depthTimer);
+                depthTimer = -1;
+            }
+        };
+
+        events.on('selection.depthFar', syncDepthPanel);
+        events.on('tool.activated', () => {
+            if (!depthPanel.hidden) {
+                positionDepthPanel();
+            }
+        });
+        window.addEventListener('resize', () => {
+            if (!depthPanel.hidden) {
+                positionDepthPanel();
+            }
+        });
+
         const updateUseDepth = (value: boolean) => {
             useDepth = value;
             depthOnIcon.style.display = value ? '' : 'none';
             depthOffIcon.style.display = value ? 'none' : '';
             selectionMode.dom.setAttribute('aria-pressed', String(value));
             selectionMode.dom.setAttribute('aria-label', i18n.t('tooltip.bottom-toolbar.use-depth'));
+            updateDepthPanel(value); // [custom]
         };
 
         events.on('selection.useDepth', updateUseDepth);

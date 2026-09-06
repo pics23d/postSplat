@@ -31,6 +31,13 @@ uniform ringsCount: u32;
 uniform outlineMode: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
+// [custom] depth selection: colour multiplier (toward black) for splats beyond
+// the far plane (projector flag, cacheB bit 26) and whether pick passes skip
+// them. Colour, not alpha: a dense sheet of overlapping gaussians saturates
+// coverage whatever the per-splat alpha, so an alpha fade barely showed on
+// real captures; darkening reads the same regardless of density and opacity
+uniform depthFade: f32;
+uniform depthGate: u32;
 
 varying gaussianUV: vec2f;
 varying gaussianColor: vec4f;
@@ -73,12 +80,22 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
     let alpha = f32((b >> 16u) & 0xffu) / 255.0;
     let flags = (b >> 24u) & 3u;
+    // [custom] beyond the depth selection far plane: darkened (below), no
+    // rings, and skipped by gated pick passes (selection); ungated depth picks
+    // (focus) still see it
+    let outside = ((b >> 26u) & 1u) != 0u;
+    #ifdef PICK_PASS
+        if (uniform.depthGate != 0u && outside) {
+            output.position = discardPosition;
+            return output;
+        }
+    #endif
     // a zero-alpha splat is invisible to the gaussian pass but is still a real,
     // editable splat: keep its quad wherever rings mode would draw its ring band
     // (mirroring the fragment shader's eligibility test) so it renders and picks
     // there. Everywhere else skip it as before, so an invisible splat can't
     // steal frontmost picks or burn fill
-    let ringEligible = uniform.ringSize > 0.0 && (flags & 2u) == 0u
+    let ringEligible = uniform.ringSize > 0.0 && (flags & 2u) == 0u && !outside
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
         && (uniform.ringSelectionOnly == 0u || (flags & 1u) != 0u);
     if (alpha == 0.0 && !ringEligible) {
@@ -128,6 +145,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
             gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
         }
     }
+    // [custom] after the tints, so a selected splat beyond the plane darkens too
+    if (outside) {
+        gaussianRgb *= uniform.depthFade;
+    }
     // ring band colours, resolved here from the untinted base: gaussian colour
     // -> flat unselected colour -> selection colour
     let ringRgb = mix(color, uniform.ringColor.rgb, uniform.ringColor.a);
@@ -151,7 +172,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.gaussianColor = vec4f(prepareOutputFromGamma(gaussianRgb, clip.w), alpha);
     output.ringColor = vec4f(prepareOutputFromGamma(ringRgb, clip.w), 1.0);
     output.selectedRingColor = vec4f(prepareOutputFromGamma(selectedRingRgb, clip.w), 1.0);
-    output.gaussianFlags = flags;
+    // bit 2 carries the far-plane flag to the fragment (rings suppression)
+    output.gaussianFlags = flags | select(0u, 4u, outside);
     output.gaussianId = entry - uniform.pickBase;
     // linear view depth for the depth pick (fragment normalizes it by near/far).
     // clip.w carries this for perspective but is a constant 1 in ortho, which
@@ -224,6 +246,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     #else
         let selected = (gaussianFlags & 1u) != 0u;
         let locked = (gaussianFlags & 2u) != 0u;
+        let outside = (gaussianFlags & 4u) != 0u; // [custom] beyond the depth selection plane
         let norm = normExp(radius);
         let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
         var alpha = select(0.0, norm * gaussianColor.a, showGaussian);
@@ -232,7 +255,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (!locked && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
+        if (!locked && !outside && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;

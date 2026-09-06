@@ -4,8 +4,11 @@ const vertexShader = /* wgsl */`
 attribute vertex_position: vec2f;
 
 uniform matrix_model: mat4x4f;
+uniform matrix_view: mat4x4f;
 uniform matrix_viewProjection: mat4x4f;
 uniform view_position: vec3f;
+// [custom] depth selection far plane in view depth (0 = off): centers beyond it are hidden
+uniform depthFar: f32;
 uniform texParams: vec2u;
 uniform instanceBase: u32;
 uniform centerSize: f32;
@@ -121,6 +124,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let model = uniform.matrix_model * paletteMatrix(instancePalette[instance] & 0xffffu);
     let center = bitcast<vec3f>(textureLoad(splatPosition, uv, 0).xyz);
     let worldPosition = model * vec4f(center, 1.0);
+    if (uniform.depthFar > 0.0 && -(uniform.matrix_view * worldPosition).z > uniform.depthFar) {
+        output.position = vec4f(0.0, 0.0, 2.0, 1.0);
+        return output;
+    }
     let projected = uniform.matrix_viewProjection * worldPosition;
     let offset = input.vertex_position * uniform.centerSize / uniform.viewportSize * projected.w;
     // keep the center's own depth so overlapping centers resolve nearest-first in

@@ -104,6 +104,7 @@ class SplatCenters extends Element {
         material.setParameter('splatPosition', positionTexture);
         material.setParameter('splatColor', (resource as any).getTexture('splatColor'));
         material.setParameter('texParams', [positionTexture.width, positionTexture.height]);
+        material.setParameter('depthFar', 0); // [custom]
 
         // set up SH textures and define based on SH bands
         const shBands = resource.shBands;
@@ -156,6 +157,8 @@ class SplatCenters extends Element {
             material.setParameter('colorBlend', events.invoke('view.centersColorBlend'));
             material.setParameter('selectionBlend', events.invoke('view.centersSelectionBlend'));
             material.setParameter('transformPalette', this.splat.transformPalette.texture);
+            // [custom] depth selection far plane
+            material.setParameter('depthFar', (events.invoke('selection.effectiveDepthFar') as number) ?? 0);
 
             // pass camera position for SH evaluation
             const camPos = scene.camera.mainCamera.getPosition();

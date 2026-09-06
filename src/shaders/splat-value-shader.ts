@@ -106,7 +106,9 @@ struct SplatValueUniforms {
     rangeStart: i32,
     rangeEnd: i32,
     colorMatchIndex: u32,
-    colorMatchThreshold: f32
+    colorMatchThreshold: f32,
+    // [custom] depth selection far plane (0 = off), see color-match.ts
+    depthFar: f32
 }
 
 struct SplatValue {

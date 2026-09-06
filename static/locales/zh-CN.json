@@ -75,6 +75,7 @@
     "panel.settings.fov-dolly": "FOV 自动推轨",
     "panel.settings.sh-bands": "SH 带",
     "panel.settings.fly-speed": "相机飞行速度",
+    "panel.settings.depth-fade": "深度选择淡化",
     "panel.settings.stochastic-alpha": "随机 Alpha",
     "panel.settings.stochastic-alpha.disabled": "禁用",
     "panel.settings.stochastic-alpha.enabled": "启用",
