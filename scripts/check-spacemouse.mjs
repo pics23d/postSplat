@@ -50,7 +50,7 @@ await (async () => {
     ev.fire('camera.setControlMode', 'orbit');
     ev.fire('camera.reset');
     await new Promise(r => setTimeout(r, 400));
-    const out = { flySpeed: cam.flySpeed, scale: instance.tuning.scale, focalDistance: cam.focalDistance };
+    const out = { flySpeed: cam.flySpeed, scale: instance.tuning.scale, rotationScale: instance.tuning.rotationScale, focalDistance: cam.focalDistance };
     out.start = pose();
     await drive({ kind: 'translation', tx: 0, ty: -1, tz: 0 }, 600);
     out.afterForward = pose();
@@ -86,11 +86,12 @@ if (Math.hypot(camDelta[0], camDelta[2]) < 0.3) failures.push(`forward: camera m
 if (dist(camDelta, focalDelta) > 1e-3) failures.push('forward: camera and focal point moved by different deltas');
 if (!near(r.afterForward.azim, r.start.azim, 1e-3) || !near(r.afterForward.elev, r.start.elev, 1e-3)) failures.push('forward: orientation changed');
 
-// yaw: position pinned, azimuth changed by roughly 90°/s × 0.5 s (× scale), elevation unchanged
+// yaw: position pinned, azimuth changed by roughly 180°/s × rotationScale × 0.5 s (≈ -54° at the
+// default 0.5; a stored rotationScale > ~3.3 wraps past 180° and reads small), elevation unchanged
 const yawMoved = dist(r.afterYaw.pos, r.afterForward.pos);
 if (yawMoved > 1e-3) failures.push(`yaw: camera position drifted by ${yawMoved}`);
 const azimDelta = ((r.afterYaw.azim - r.afterForward.azim + 540) % 360) - 180;
-if (Math.abs(azimDelta) < 20 * r.scale) failures.push(`yaw: azimuth changed only ${azimDelta}°`);
+if (Math.abs(azimDelta) < 40 * r.rotationScale) failures.push(`yaw: azimuth changed only ${azimDelta}°`);
 if (!near(r.afterYaw.elev, r.afterForward.elev, 1e-3)) failures.push('yaw: elevation changed');
 
 // lift: pure +Y
@@ -99,7 +100,7 @@ if (liftDelta[1] < 0.2) failures.push(`lift: moved up only ${liftDelta[1]}`);
 if (Math.hypot(liftDelta[0], liftDelta[2]) > 1e-3) failures.push('lift: moved horizontally');
 
 console.log(JSON.stringify({
-    tuning: { flySpeed: r.flySpeed, scale: r.scale, focalDistance: r.focalDistance },
+    tuning: { flySpeed: r.flySpeed, scale: r.scale, rotationScale: r.rotationScale, focalDistance: r.focalDistance },
     forward: { camDelta, mode: r.afterForward.mode },
     yaw: { azimDelta, positionDrift: yawMoved },
     lift: { delta: liftDelta }

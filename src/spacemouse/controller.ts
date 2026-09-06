@@ -29,7 +29,11 @@ const DEFAULT_SIGNS = { tx: 1, ty: -1, tz: -1, rx: -1, ry: -1, rz: 1 };
  * fly-tested 3 units/s on the fixture scene (focal distance ≈ 1.4 there), 2026-09-05.
  */
 const TRANSLATE_SPEED = 2;
-/** degrees per second at full deflection, × spacemouse.scale (fly-tested 2026-09-05) */
+/**
+ * degrees per second at full deflection, × spacemouse.rotationScale (default 0.5 → 90°/s).
+ * 180 was fly-tested 2026-09-05 at the shared scale; the separate rotation gain came from
+ * user feedback that rotation felt too fast next to movement (2026-09-06).
+ */
 const ROTATE_SPEED = 180;
 /** how long after the last rotation report driver-synthesized wheel events are swallowed */
 const WHEEL_SUPPRESS_MS = 250;
@@ -125,7 +129,7 @@ export class SpaceMouseController {
 
         if (pitchDown !== 0 || yawRight !== 0) {
             this.lastRotationTime = performance.now();
-            const rotate = ROTATE_SPEED * tuning.scale * dt;
+            const rotate = ROTATE_SPEED * tuning.rotationScale * dt;
             this.rotateAboutCamera(yawRight * rotate, pitchDown * rotate);
         }
 

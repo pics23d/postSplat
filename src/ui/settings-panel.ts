@@ -342,6 +342,26 @@ class SettingsPanel extends Container {
         spaceMouseScaleRow.append(spaceMouseScaleLabel);
         spaceMouseScaleRow.append(spaceMouseScaleSlider);
 
+        const spaceMouseRotationRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const spaceMouseRotationLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(spaceMouseRotationLabel, 'panel.settings.spacemouse-rotation-sensitivity');
+
+        const spaceMouseRotationSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0.1,
+            max: 10,
+            precision: 2,
+            value: 0.5
+        });
+
+        spaceMouseRotationRow.append(spaceMouseRotationLabel);
+        spaceMouseRotationRow.append(spaceMouseRotationSlider);
+
         const spaceMouseDeadzoneRow = new Container({
             class: 'settings-panel-row'
         });
@@ -415,6 +435,7 @@ class SettingsPanel extends Container {
         this.append(spaceMouseStatusRow);
         this.append(spaceMouseEnabledRow);
         this.append(spaceMouseScaleRow);
+        this.append(spaceMouseRotationRow);
         this.append(spaceMouseDeadzoneRow);
         this.append(spaceMouseInvertTranslation.row);
         this.append(spaceMouseInvertRotation.row);
@@ -556,6 +577,14 @@ class SettingsPanel extends Container {
 
         spaceMouseScaleSlider.on('change', (value: number) => {
             events.fire('spacemouse.setScale', value);
+        });
+
+        events.on('spacemouse.rotationScale', (value: number) => {
+            spaceMouseRotationSlider.value = value;
+        });
+
+        spaceMouseRotationSlider.on('change', (value: number) => {
+            events.fire('spacemouse.setRotationScale', value);
         });
 
         events.on('spacemouse.deadzone', (value: number) => {

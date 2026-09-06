@@ -97,6 +97,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         // [custom] SpaceMouse tuning (src/spacemouse/events.ts)
         { key: 'spacemouse.enabled', setCommand: 'spacemouse.setEnabled', getDefault: () => true, validate: isBool, group: 'preferences' },
         { key: 'spacemouse.scale', setCommand: 'spacemouse.setScale', getDefault: () => 1, validate: isNumber(0.1, 10), group: 'preferences' },
+        { key: 'spacemouse.rotationScale', setCommand: 'spacemouse.setRotationScale', getDefault: () => 0.5, validate: isNumber(0.1, 10), group: 'preferences' },
         { key: 'spacemouse.deadzone', setCommand: 'spacemouse.setDeadzone', getDefault: () => 0.03, validate: isNumber(0, 0.5), group: 'preferences' },
         { key: 'spacemouse.invert', setCommand: 'spacemouse.setInvert', getDefault: () => [false, false, false, false, false, false], validate: v => Array.isArray(v) && v.length === 6 && v.every(x => x === 0 || x === 1), group: 'preferences', toEvent: (v: PrefValue) => (v as number[]).map(x => x === 1), fromEvent: (flags: boolean[]) => flags.map(f => (f ? 1 : 0)) },
         { key: 'view.centerSize', setCommand: 'view.setCenterSize', getDefault: () => 2, validate: isNumber(0, 10), group: 'appearance' },

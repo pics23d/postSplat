@@ -1,7 +1,7 @@
 // [custom] SpaceMouse events + tuning state, following the editor's convention:
 //   `spacemouse.foo`     getter (events.function) and change notification (events.fire)
 //   `spacemouse.setFoo`  command (events.on)
-// preferences.ts persists enabled/scale/deadzone/invert through exactly these names.
+// preferences.ts persists enabled/scale/rotationScale/deadzone/invert through exactly these names.
 
 import { DEFAULT_DEADZONE } from './curve';
 import { SpaceMouseState } from './state';
@@ -10,8 +10,13 @@ import { Events } from '../events';
 
 export type SpaceMouseTuning = {
     enabled: boolean;
-    /** master speed multiplier on top of camera.flySpeed */
+    /** translation speed multiplier on top of camera.flySpeed */
     scale: number;
+    /**
+     * rotation speed multiplier, independent of scale (user CR 2026-09-06:
+     * at equal gain rotation feels far too fast next to movement)
+     */
+    rotationScale: number;
     deadzone: number;
     /** per-axis invert flags in desk-frame order tx, ty, tz, rx, ry, rz */
     invert: boolean[];
@@ -30,6 +35,7 @@ export const registerSpaceMouseEvents = (events: Events): SpaceMouseInstance => 
     const tuning: SpaceMouseTuning = {
         enabled: true,
         scale: 1,
+        rotationScale: 0.5,
         deadzone: DEFAULT_DEADZONE,
         invert: [false, false, false, false, false, false],
         debug: false
@@ -74,6 +80,17 @@ export const registerSpaceMouseEvents = (events: Events): SpaceMouseInstance => 
     };
     events.function('spacemouse.scale', () => tuning.scale);
     events.on('spacemouse.setScale', (value: number) => setScale(value));
+
+    // rotation scale
+
+    const setRotationScale = (value: number) => {
+        if (value !== tuning.rotationScale) {
+            tuning.rotationScale = value;
+            events.fire('spacemouse.rotationScale', value);
+        }
+    };
+    events.function('spacemouse.rotationScale', () => tuning.rotationScale);
+    events.on('spacemouse.setRotationScale', (value: number) => setRotationScale(value));
 
     // deadzone
 
