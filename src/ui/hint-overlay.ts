@@ -74,6 +74,17 @@ class HintOverlay extends Container {
             { keys: combo('Alt', 'hint.key-wheel'), localeKey: 'hint.depth-plane' }
         ]);
 
+        // the eyedropper is a sampling session (M4): clicks collect colour
+        // samples and the op buttons in its toolbar replace the modifiers
+        const eyedropper = section('popup.shortcuts.selection', [
+            { keys: word('hint.key-click'), localeKey: 'hint.add-sample' },
+            { keys: word('hint.key-drag'), localeKey: 'hint.sample-region' },
+            { keys: combo('Shift', 'hint.key-click'), localeKey: 'hint.new-samples' },
+            { keys: shortcut('tool.escape'), localeKey: 'popup.shortcuts.deselect-all' },
+            { keys: shortcut('selection.toggleUseDepth'), localeKey: 'popup.shortcuts.toggle-depth' },
+            { keys: combo('Alt', 'hint.key-wheel'), localeKey: 'hint.depth-plane' }
+        ]);
+
         const orbit = section('popup.shortcuts.navigation', [
             { keys: word('hint.key-drag'), localeKey: 'hint.orbit' },
             { keys: word('hint.key-right-drag'), localeKey: 'hint.pan' },
@@ -97,12 +108,17 @@ class HintOverlay extends Container {
             { keys: shortcut('camera.toggleControlMode'), localeKey: 'popup.shortcuts.toggle-control-mode' }
         ]);
 
-        let activeTool: string | null = (events.invoke('tool.active') as string) ?? null;
-        let controlMode: string = (events.invoke('camera.controlMode') as string) ?? 'orbit';
+        // the overlay is built before the tool manager and camera register
+        // their functions (invoking them here logged "function not found" at
+        // every start); both states arrive through the events below
+        let activeTool: string | null = null;
+        let controlMode = 'orbit';
 
         const update = () => {
             const selecting = activeTool !== null && SELECTION_TOOLS.has(activeTool);
-            selection.container.hidden = !selecting;
+            const sampling = activeTool === 'eyedropperSelection';
+            selection.container.hidden = !selecting || sampling;
+            eyedropper.container.hidden = !sampling;
             selection.byId.get('brush').hidden = !(activeTool !== null && BRUSH_TOOLS.has(activeTool));
             orbit.container.hidden = selecting || controlMode === 'fly';
             fly.container.hidden = selecting || controlMode !== 'fly';

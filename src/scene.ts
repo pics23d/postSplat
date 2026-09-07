@@ -111,6 +111,11 @@ class Scene {
     movingRender = false;
     pendingResolve = false;
 
+    // [custom] one frame that must take the sorted path whatever the
+    // interaction state: the eyedropper's colour-sampling render (a 1 spp
+    // stochastic frame is noise, not a measurement). Consumed by onUpdate.
+    forceSortedFrame = false;
+
     // 'auto' stochastic mode follows the timing of the last rendered sorted
     // frame: engaged (stochastic-during-movement) while that frame's GPU span
     // exceeded autoEngageMs, disengaged once a later sorted frame - at minimum
@@ -538,7 +543,7 @@ class Scene {
         this.autoSampling = auto && this.frameTimings.gpuSupported;
         const adaptive = stochastic === 'movement' ||
             (auto && (this.autoEngaged || !this.frameTimings.gpuSupported));
-        this.movingRender = !this.lockedRenderMode &&
+        this.movingRender = !this.lockedRenderMode && !this.forceSortedFrame &&
             (stochastic === 'enabled' || (adaptive && interacting));
 
         // timestamp queries cost a per-frame staging-buffer map and a resolve,
@@ -571,6 +576,7 @@ class Scene {
         }
         this.forceRender = false;
         this.forceInteracting = false;
+        this.forceSortedFrame = false; // [custom]
 
         // raise per-type update events
         ElementTypeList.forEach((type) => {

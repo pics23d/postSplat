@@ -55,7 +55,13 @@ const createSplatValueUniformFormat = (device: GraphicsDevice) => new UniformBuf
     new UniformFormat('rangeEnd', UNIFORMTYPE_INT),
     new UniformFormat('colorMatchIndex', UNIFORMTYPE_UINT),
     new UniformFormat('colorMatchThreshold', UNIFORMTYPE_FLOAT),
-    new UniformFormat('depthFar', UNIFORMTYPE_FLOAT) // [custom]
+    new UniformFormat('depthFar', UNIFORMTYPE_FLOAT), // [custom]
+    // [custom] colour selection (M4), see color-match.ts
+    new UniformFormat('colorMetric', UNIFORMTYPE_INT),
+    new UniformFormat('colorRefCount', UNIFORMTYPE_UINT),
+    new UniformFormat('hsvWeightH', UNIFORMTYPE_FLOAT),
+    new UniformFormat('hsvWeightS', UNIFORMTYPE_FLOAT),
+    new UniformFormat('hsvWeightV', UNIFORMTYPE_FLOAT)
 ]);
 
 const createSplatValueTextureFormats = (bands: number) => {
@@ -133,6 +139,12 @@ const setSplatValueParameters = (
     compute.setParameter('colorMatchIndex', 0);
     compute.setParameter('colorMatchThreshold', 0);
     compute.setParameter('depthFar', options?.depthFar ?? 0);
+    // [custom] colour selection defaults; the match kernel overrides them
+    compute.setParameter('colorMetric', 0);
+    compute.setParameter('colorRefCount', 0);
+    compute.setParameter('hsvWeightH', 1);
+    compute.setParameter('hsvWeightS', 1);
+    compute.setParameter('hsvWeightV', 1);
 };
 
 export {

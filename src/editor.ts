@@ -8,6 +8,7 @@ import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { Scene } from './scene';
 import { Splat } from './splat';
+import { oklabDistance, quantizeColors, rgbToOklab } from './tools/color-quantize'; // [custom]
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -827,54 +828,374 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // Eyedropper selection with SelectOp so undo/redo and selection state updates remain consistent.
-    // Threshold acts as a per-channel absolute difference: 0 only matches identical colors while 1 matches everything.
-    // TO DO:
-    // -  alternative distance metrics such as HSV.
-    // -  alternative UI for threshold, two handles for min/max?
-    events.function('select.colorMatch', async (op: 'add'|'remove'|'set'|'intersect', point: { x: number, y: number }, threshold = 0) => {
-        const splats = selectedSplats();
+    // [custom] Eyedropper colour selection (M4). Upstream matched one picked
+    // splat against a per-channel threshold in one step; the fork splits it in
+    // two so the tool can hold several samples and preview live:
+    //   select.colorSample(point) -> the rendered colour ([r, g, b]) under the
+    //     normalized point, or null over the void. Sampled like a 2D eyedropper
+    //     from a clean render (no tints, no depth fade, splats beyond the depth
+    //     plane left out), averaged over a small box: the frontmost splat under
+    //     a pixel is usually a faint veil, not the colour the user means (2026-09-06,
+    //     just-tree.ply: 13 of 80 picks under sky pixels were sky splats).
+    //   select.colorSampleRegion(points, maxColors) -> the distinct colours
+    //     along a stroke, quantised in OKLab, largest cluster first.
+    //   select.colorMatch(op, refs, params) -> a SelectOp against every splat
+    //     whose colour lies within params.tolerance of any reference colour
+    //     under params.metric ('rgb' | 'hsv' | 'oklab'); resolves to the op once
+    //     it is in the history so the caller can recognise it later (edit.top).
+    const SAMPLE_RADIUS = 2;         // box half-size in render pixels
+    const SAMPLE_MIN_ALPHA = 0.05;   // below this the box is the void
+
+    type Rgb = [number, number, number];
+    type NormalizedPoint = { x: number, y: number };
+
+    // one clean render at half resolution with a box sampler over it. The
+    // splat pass composites premultiplied over transparent black, so dividing
+    // a box's rgb sum by its alpha sum recovers the alpha-weighted colour of
+    // the contributing splats instead of a colour darkened at soft edges
+    const cleanRender = async () => {
         const targetSize = scene.targetSize;
-        if (!splats.length || !targetSize || !point) {
-            return;
+        if (!selectedSplats().length || !targetSize?.width || !targetSize?.height) {
+            return null;
         }
+        const width = Math.max(1, Math.round(targetSize.width / 2));
+        const height = Math.max(1, Math.round(targetSize.height / 2));
+        const data = await events.invoke('render.offscreen', width, height, true) as Uint8Array;
+        const toPixel = (point: NormalizedPoint) => ({
+            x: Math.round(Math.max(0, Math.min(1, point.x)) * (width - 1)),
+            y: Math.round(Math.max(0, Math.min(1, point.y)) * (height - 1))
+        });
+        // un-premultiplied colour of one pixel, null in the void
+        const pixel = (x: number, y: number): Rgb | null => {
+            const i = (y * width + x) * 4;
+            const a = data[i + 3];
+            if (a < SAMPLE_MIN_ALPHA * 255) {
+                return null;
+            }
+            return [Math.min(1, data[i] / a), Math.min(1, data[i + 1] / a), Math.min(1, data[i + 2] / a)];
+        };
+        const sample = (point: NormalizedPoint): Rgb | null => {
+            const { x: cx, y: cy } = toPixel(point);
+            let r = 0, g = 0, b = 0, a = 0, n = 0;
+            for (let y = Math.max(0, cy - SAMPLE_RADIUS); y <= Math.min(height - 1, cy + SAMPLE_RADIUS); y++) {
+                for (let x = Math.max(0, cx - SAMPLE_RADIUS); x <= Math.min(width - 1, cx + SAMPLE_RADIUS); x++) {
+                    const i = (y * width + x) * 4;
+                    r += data[i]; g += data[i + 1]; b += data[i + 2]; a += data[i + 3]; n++;
+                }
+            }
+            if (!n || a / n < SAMPLE_MIN_ALPHA * 255) {
+                return null;
+            }
+            return [Math.min(1, r / a), Math.min(1, g / a), Math.min(1, b / a)];
+        };
+        return { data, width, height, toPixel, pixel, sample };
+    };
 
-        const { width, height } = targetSize;
-        if (!width || !height) {
-            return;
+    events.function('select.colorSample', async (point: NormalizedPoint) => {
+        if (!point) {
+            return null;
         }
+        const render = await cleanRender();
+        return render ? render.sample(point) : null;
+    });
 
-        // Clamp normalized coordinates to valid range
-        const nx = Math.max(0, Math.min(1, point.x));
-        const ny = Math.max(0, Math.min(1, point.y));
-        const colorThreshold = Math.min(1, Math.max(0, Number.isFinite(threshold) ? threshold : 0));
-        // [custom] far plane: gates the reference pick (pickPrep) and the match kernel
+    events.function('select.colorSampleRegion', async (points: NormalizedPoint[], maxColors = 16) => {
+        if (!points?.length) {
+            return [];
+        }
+        const render = await cleanRender();
+        if (!render) {
+            return [];
+        }
+        const colors = points.map(render.sample).filter(c => c !== null);
+        return quantizeColors(colors, maxColors);
+    });
+
+    // magic wand region: flood fill of the clean render from each seed, joining
+    // pixels whose colour lies within tolerance (OKLab) of that seed's colour,
+    // like Photoshop's contiguous wand. Returns the union mask (1 = in region)
+    // and its pixel count
+    // pixels below this coverage never join a flood: their un-premultiplied
+    // colour is 8-bit noise, and the fringe of every splat is made of them, so
+    // a flood would leak through the whole image (tree, 2026-09-06: a 0.12 click
+    // grew to 98k pixels and hid 1,331 splats, most of them foliage)
+    const FLOOD_MIN_ALPHA = 0.15;
+    // pixels contributing to the region's colour palette must be this covered
+    const FLOOD_PALETTE_MIN_ALPHA = 0.5;
+
+    const floodRegion = (render: NonNullable<Awaited<ReturnType<typeof cleanRender>>>, seeds: NormalizedPoint[], tolerance: number) => {
+        const { data, width, height, pixel, toPixel, sample } = render;
+        const mask = new Uint8Array(width * height);
+        const lab = new Float32Array(width * height * 3);
+        const labDone = new Uint8Array(width * height);
+        const labAt = (index: number, x: number, y: number): [number, number, number] | null => {
+            if (!labDone[index]) {
+                labDone[index] = 1;
+                const c = data[index * 4 + 3] >= FLOOD_MIN_ALPHA * 255 ? pixel(x, y) : null;
+                if (!c) {
+                    return null;
+                }
+                const l = rgbToOklab(c);
+                lab[index * 3] = l[0]; lab[index * 3 + 1] = l[1]; lab[index * 3 + 2] = l[2];
+                labDone[index] = 2;
+            }
+            return labDone[index] === 2 ? [lab[index * 3], lab[index * 3 + 1], lab[index * 3 + 2]] : null;
+        };
+        let count = 0;
+        const bbox = { x0: width, y0: height, x1: -1, y1: -1 };
+        // the region's palette, from well-covered pixels only: a sky shade the
+        // seed alone would miss is in here, a sky-through-leaves blend is not
+        const colors: Rgb[] = [];
+        const stack: number[] = [];
+        for (const seed of seeds) {
+            const { x: sx, y: sy } = toPixel(seed);
+            const seedIndex = sy * width + sx;
+            // the seed colour is the box sample, not one pixel: a click on a
+            // sky-through-leaves blend would otherwise seed a colour within
+            // tolerance of both sides
+            const seedColor = sample(seed);
+            const seedLab = seedColor && labAt(seedIndex, sx, sy) ? rgbToOklab(seedColor) : null;
+            if (!seedLab || mask[seedIndex]) {
+                continue;
+            }
+            mask[seedIndex] = 1;
+            stack.push(seedIndex);
+            while (stack.length) {
+                const index = stack.pop();
+                const x = index % width;
+                const y = (index - x) / width;
+                count++;
+                if (x < bbox.x0) bbox.x0 = x;
+                if (x > bbox.x1) bbox.x1 = x;
+                if (y < bbox.y0) bbox.y0 = y;
+                if (y > bbox.y1) bbox.y1 = y;
+                const neighbours = [index - 1, index + 1, index - width, index + width];
+                const valid = [x > 0, x < width - 1, y > 0, y < height - 1];
+                for (let k = 0; k < 4; k++) {
+                    const n = neighbours[k];
+                    if (!valid[k] || mask[n]) {
+                        continue;
+                    }
+                    const nl = labAt(n, n % width, (n - (n % width)) / width);
+                    if (nl && Math.hypot(nl[0] - seedLab[0], nl[1] - seedLab[1], nl[2] - seedLab[2]) <= tolerance) {
+                        mask[n] = 1;
+                        stack.push(n);
+                    }
+                }
+            }
+        }
+        // the palette comes from the region's interior (all four neighbours in
+        // the region): the rim is where the patch blends into its surroundings
+        // within tolerance, and those mixed pixels made a chip of their own
+        // (user report 2026-09-07: a greenish chip from a click on blue sky)
+        let sampled = 0;
+        for (let y = bbox.y0; y <= bbox.y1; y++) {
+            for (let x = bbox.x0; x <= bbox.x1; x++) {
+                const index = y * width + x;
+                if (!mask[index]) continue;
+                const interior = x > 0 && x < width - 1 && y > 0 && y < height - 1 &&
+                    mask[index - 1] && mask[index + 1] && mask[index - width] && mask[index + width];
+                if (!interior) continue;
+                if ((sampled++ & 7) === 0 && data[index * 4 + 3] >= FLOOD_PALETTE_MIN_ALPHA * 255) {
+                    const c = pixel(x, y);
+                    if (c) colors.push(c);
+                }
+            }
+        }
+        // bbox as fractions of the render, for diagnostics
+        return { mask, count, colors, bbox: { x0: bbox.x0 / width, y0: bbox.y0 / height, x1: (bbox.x1 + 1) / width, y1: (bbox.y1 + 1) / height } };
+    };
+
+    // a region mask (1 = in) on a canvas the footprint pass can read
+    const maskCanvas = (mask: Uint8Array, width: number, height: number) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        const image = context.createImageData(width, height);
+        for (let i = 0; i < mask.length; i++) {
+            if (mask[i]) {
+                image.data[i * 4] = 255;
+                image.data[i * 4 + 3] = 255;
+            }
+        }
+        context.putImageData(image, 0, 0);
+        return { canvas, context };
+    };
+
+    const COLOR_METRICS: { [key: string]: number } = { rgb: 0, hsv: 1, oklab: 2 };
+
+    // region: strokes (normalized points) and a radius as a fraction of the
+    // target width; the match is limited to splats whose centre projects within
+    // that distance of a stroke (2026-09-06: the residual sky patches on the tree
+    // are a few opaque whitish splats whose colours match nothing in the chips;
+    // their own sampled colour at 0.16 sweeps 494 splats scene-wide but 25 near
+    // the stroke)
+    type ColorMatchRegion = { strokes: { x: number, y: number }[][], radius: number };
+
+    // the strokes drawn as round-capped lines on a half-resolution mask canvas
+    const regionCanvas = (region: ColorMatchRegion) => {
+        const { width, height } = scene.targetSize;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(width / 2));
+        canvas.height = Math.max(1, Math.round(height / 2));
+        const context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.strokeStyle = '#f60';
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.lineWidth = Math.max(1, 2 * region.radius * canvas.width);
+        for (const stroke of region.strokes) {
+            if (!stroke.length) continue;
+            context.beginPath();
+            context.moveTo(stroke[0].x * canvas.width, stroke[0].y * canvas.height);
+            for (const p of stroke) {
+                context.lineTo(p.x * canvas.width, p.y * canvas.height);
+            }
+            context.stroke();
+        }
+        return { canvas, context };
+    };
+
+    // splats whose projected ellipse touches a screen region. Always the
+    // footprint test, whatever the toolbar's centres/footprint toggle says: the
+    // splats that paint a patch mostly have their centres elsewhere (tree, sky
+    // stroke at 12 px: centres 19 splats / 0 % of the sky, footprint 113 / 41 %;
+    // user question 2026-09-06). The toggle's footprint scale is honoured when set.
+    const regionSplats = (splat: Splat, region: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D }): Promise<Uint8Array | null> => {
+        const toggle = events.invoke('selection.footprint') as number;
+        const footprint = toggle > 0 ? toggle : 1;
+        return scene.projectedSplatRenderer.footprintIntersect(splat, maskRegion(region.context, region.canvas.width, region.canvas.height), footprint);
+    };
+
+    type ColorMatchParams = { metric?: string, tolerance?: number, hsvWeights?: [number, number, number] };
+
+    // the colour match itself, optionally ANDed with a screen region; adds one
+    // SelectOp per edit target and resolves to the last one
+    const runColorMatch = async (
+        op: 'add' | 'remove' | 'set' | 'intersect',
+        refs: number[][],
+        params: ColorMatchParams,
+        region: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D } | null
+    ) => {
+        const splats = selectedSplats();
+        if (!splats.length || !refs?.length) {
+            return null;
+        }
+        const flat = new Float32Array(refs.length * 3);
+        refs.forEach((c, i) => flat.set([c[0], c[1], c[2]], i * 3));
+        const matchParams = {
+            metric: COLOR_METRICS[params.metric ?? 'rgb'] ?? 0,
+            tolerance: Math.max(0, Number.isFinite(params.tolerance) ? params.tolerance : 0),
+            hsvWeights: params.hsvWeights
+        };
+        // far plane: gates the match kernel (the sample pick was gated when taken)
         const depthFar = depthFarSnapshot();
         const viewMatrix = scene.camera.camera.viewMatrix.clone();
 
+        let result: SelectOp | null = null;
         for (const splat of splats) {
-            scene.camera.pickPrep(splat, 'set');
-            // Use normalized coordinates with minimal size for single pixel pick
-            const pickBuffer = await scene.camera.pickRect(nx, ny, 1 / width, 1 / height);
-            const pickId = pickBuffer?.[0];
-            if (pickId === undefined || pickId === 0xffffffff) {
-                continue;
-            }
-
-            if (pickId < 0 || pickId >= splat.instances.count) {
-                continue;
-            }
-            await scene.commandQueue.enqueue(async () => {
-                const mask = await scene.dataProcessor.colorMatch(splat, pickId, colorThreshold, {
+            // the op is built inside the queue so it sees the selection state
+            // after any undo that was queued before it (live preview)
+            const selectOp = await scene.commandQueue.enqueue(async () => {
+                const mask = await scene.dataProcessor.colorMatch(splat, flat, matchParams, {
                     entityMatrix: splat.entity.getWorldTransform(),
                     cameraPos: scene.camera.position,
                     viewMatrix,
                     depthFar
                 });
-                events.fire('edit.add', new SelectOp(splat, op, mask));
+                if (region) {
+                    const inRegion = await regionSplats(splat, region);
+                    if (inRegion) {
+                        for (let i = 0; i < mask.length; i++) {
+                            mask[i] = inRegion[i] === 255 ? mask[i] : 0;
+                        }
+                    }
+                }
+                const selectOp = new SelectOp(splat, op, mask);
                 scene.dataProcessor.releaseMask(mask);
+                return selectOp;
             });
+            await editHistory.add(selectOp);
+            result = selectOp;
         }
+        return result;
+    };
+
+    events.function('select.colorMatch', (
+        op: 'add' | 'remove' | 'set' | 'intersect',
+        refs: number[][],
+        params: ColorMatchParams & { region?: ColorMatchRegion } = {}
+    ) => {
+        const region = params.region?.strokes?.length ? regionCanvas(params.region) : null;
+        return runColorMatch(op, refs, params, region);
+    });
+
+    // [custom] magic wand (M4, user feedback 2026-09-06: "near stroke + radius"
+    // exposed the mechanism, the intent is Photoshop's wand). seeds = the
+    // session's clicks and stroke points. Contiguous: flood the clean render
+    // from every seed within the tolerance, take the region's colours as the
+    // references and limit the match to splats whose footprint touches the
+    // region. Not contiguous: the seeds' sampled colours matched everywhere.
+    // Resolves to { op, refs } (op = the SelectOp now on top of the history).
+    // reference colours the user dropped by clicking their chips: a reference
+    // within this OKLab distance of an excluded colour is left out
+    const EXCLUDE_DISTANCE = 0.05;
+    const withoutExcluded = (refs: Rgb[], exclude: Rgb[] | undefined) => {
+        if (!exclude?.length) {
+            return refs;
+        }
+        return refs.filter(ref => !exclude.some(e => oklabDistance(ref, e) <= EXCLUDE_DISTANCE));
+    };
+
+    events.function('select.colorWand', async (
+        op: 'add' | 'remove' | 'set' | 'intersect',
+        seeds: NormalizedPoint[],
+        params: ColorMatchParams & { contiguous?: boolean, exclude?: Rgb[] } = {}
+    ) => {
+        if (!seeds?.length) {
+            return null;
+        }
+        const render = await cleanRender();
+        if (!render) {
+            return null;
+        }
+        const tolerance = Math.max(0, Number.isFinite(params.tolerance) ? params.tolerance : 0);
+        if (params.contiguous === false) {
+            // every click stays its own reference (only near-duplicates merge):
+            // with the default merge distance the sky patches of the tree all
+            // folded into one chip and further clicks changed nothing
+            const refs = withoutExcluded(quantizeColors(seeds.map(render.sample).filter(c => c !== null), 16, 0.015), params.exclude);
+            if (!refs.length) {
+                return null;
+            }
+            const selectOp = await runColorMatch(op, refs, params, null);
+            return selectOp ? { op: selectOp, refs } : null;
+        }
+        const flood = floodRegion(render, seeds, tolerance);
+        if (!flood.count) {
+            return null;
+        }
+        // references = the seeds plus the region's well-covered palette, minus
+        // the chips the user dropped. The seeds alone miss the patch's other
+        // shades (tree, 2026-09-06: one seed at 0.1 selected 24 splats and
+        // cleared 3 % of the sky); the whole palette including thin blends
+        // matched foliage (a 0.08 click hid 707 splats and the sky grew by 38 %).
+        // Palette shades covering less than 3 % of the interior are noise
+        const palette = quantizeColors(flood.colors, 16, 0.05, 0.03);
+        const refs = withoutExcluded(quantizeColors([...seeds.map(render.sample).filter(c => c !== null), ...palette], 16), params.exclude);
+        if (!refs.length) {
+            return null;
+        }
+        const region = maskCanvas(flood.mask, render.width, render.height);
+        const selectOp = await runColorMatch(op, refs, params, region);
+        return selectOp ? { op: selectOp, refs, pixels: flood.count, bbox: flood.bbox } : null;
+    });
+
+    // [custom] the most recent applied history entry (null when none), so a
+    // tool can tell whether its own preview op is still the top of the stack
+    events.function('edit.top', () => {
+        return editHistory.history[editHistory.cursor - 1] ?? null;
     });
 
     events.on('select.hide', () => {

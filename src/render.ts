@@ -109,8 +109,19 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         });
     };
 
-    events.function('render.offscreen', async (width: number, height: number): Promise<Uint8Array> => {
+    // [custom] clean = the colour-sampling render (M4): no selection / locked
+    // tints, no depth-plane darkening, splats beyond the plane left out, so the
+    // pixels are the splats' own colours as the eyedropper kernel sees them
+    let cleanRender = false;
+    events.function('render.clean', () => cleanRender);
+
+    events.function('render.offscreen', async (width: number, height: number, clean = false): Promise<Uint8Array> => {
         try {
+            cleanRender = clean;
+            // the sampling render must be the sorted blend even mid-interaction
+            if (clean) {
+                scene.forceSortedFrame = true;
+            }
             // start rendering to offscreen buffer only
             scene.camera.startOffscreenMode(width, height);
             scene.camera.renderOverlays = false;
@@ -139,6 +150,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // rows are read back top-down (0,0 at the top)
             return data;
         } finally {
+            cleanRender = false;
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;

@@ -28,6 +28,83 @@
         svg {
             color: $clr-default;
         }
+
+        // [custom] the eyedropper's op buttons are a persistent choice
+        &.active {
+            background-color: $clr-hilight !important;
+
+            svg {
+                color: $clr-active;
+            }
+        }
+    }
+
+    // [custom] eyedropper (M4): metric dropdown, tolerance slider, sample chips
+    > .select-toolbar-select {
+        width: 90px;
+        margin: 0px;
+    }
+
+    > .select-toolbar-slider {
+        width: 190px;
+        flex-shrink: 0;
+        margin: 0px;
+
+        // the numeric field must fit three decimals at any UI scale (it was
+        // clipped to "0.1" on a wide display, user report 2026-09-07)
+        > .pcui-numeric-input {
+            flex: 0 0 64px;
+            width: 64px;
+            min-width: 64px;
+        }
+
+        > .pcui-slider-container > .pcui-slider-bar > .pcui-slider-handle {
+            background-color: $clr-default;
+            border-radius: 3px;
+        }
+    }
+
+    // the labels and text buttons never give way to the chips
+    > .select-toolbar-label,
+    > .select-toolbar-button {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    // toggle state of a text button
+    > .select-toolbar-button.active {
+        color: $clr-active;
+        background-color: $clr-hilight !important;
+    }
+
+    // checkbox toggles (eyedropper "contiguous")
+    > .select-toolbar-toggle {
+        margin: 0px;
+        flex-shrink: 0;
+    }
+
+    // 16 chips at most: two rows of eight
+    > .select-toolbar-samples {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
+        margin: 0px 8px 0px 0px;
+        width: 156px;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+
+        > .select-toolbar-sample {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid $bcg-dark;
+            cursor: pointer;
+
+            &:hover {
+                border-color: $clr-hilight;
+            }
+        }
     }
 
     // gizmo mode buttons mirror the bottom toolbar's tool buttons

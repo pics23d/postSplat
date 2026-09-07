@@ -11,11 +11,14 @@
 //
 // Prints the JSON-serialized result (or the exception) and exits non-zero on failure.
 
+import fs from 'node:fs';
+
 const args = process.argv.slice(2);
 let port = 9222;
 let awaitPromise = false;
 let focus = false;
 let click = null;
+let drag = null;
 let typeText = null;
 const keys = [];
 let timeoutMs = 15000;
@@ -39,6 +42,13 @@ for (let i = 0; i < args.length; i++) {
         // synthesize a left click at CSS pixel x,y first: grants user activation, which
         // Chromium requires before it honours beforeunload / prompts
         click = args[++i].split(',').map(Number);
+    } else if (args[i] === '--drag') {
+        // synthesize a left drag x1,y1,x2,y2 (css px): press, 24 moves, release
+        drag = args[++i].split(',').map(Number);
+    } else if (args[i] === '--file') {
+        // read the expression from a file (multi-statement probes without quoting
+        // trouble; semicolons in an inline argument trip the permission matcher)
+        rest.push(fs.readFileSync(args[++i], 'utf8'));
     } else if (args[i] === '--screenshot') {
         // save the page as rendered (PNG) after evaluating — no focus change, unlike a
         // desktop capture, so it works while other windows cover the app
@@ -74,8 +84,6 @@ await new Promise((resolve, reject) => {
     ws.onerror = reject;
 });
 
-import fs from 'node:fs';
-
 const call = (method, params = {}) => new Promise((resolve, reject) => {
     const id = Math.floor(Math.random() * 1e9);
     const onMessage = (event) => {
@@ -99,6 +107,16 @@ if (click) {
     for (const type of ['mousePressed', 'mouseReleased']) {
         await call('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
     }
+}
+
+if (drag) {
+    const [x1, y1, x2, y2] = drag;
+    await call('Input.dispatchMouseEvent', { type: 'mousePressed', x: x1, y: y1, button: 'left', buttons: 1, clickCount: 1 });
+    const steps = 24;
+    for (let s = 1; s <= steps; s++) {
+        await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x1 + (x2 - x1) * s / steps, y: y1 + (y2 - y1) * s / steps, button: 'left', buttons: 1 });
+    }
+    await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x2, y: y2, button: 'left', buttons: 0, clickCount: 1 });
 }
 
 if (typeText !== null) {

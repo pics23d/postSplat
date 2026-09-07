@@ -51,7 +51,15 @@ fn readSHCoeff(s: SplatValue, index: i32) -> f32 {
 }
 
 fn evaluateSH(s: SplatValue) -> vec3f {
-    let direction = normalize(s.worldPos - uniforms.cameraWorldPos);
+    // [custom] the SH coefficients live in the gaussian's local frame: bring the
+    // view direction into it exactly as the projector does (transpose of the
+    // model rotation). With the world direction, every splat with strong band-1
+    // terms read a different colour here than on screen (SuperSplat rotates
+    // PLY data 180 degrees about Z, so x and y flipped: the tree's sky splats
+    // rendered blue but histogrammed dark yellow, 2026-09-07)
+    let model = uniforms.entityMatrix * paletteMatrix(s.paletteIndex);
+    let worldDirection = normalize(s.worldPos - uniforms.cameraWorldPos);
+    let direction = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
     var coefficients: array<vec3f, ${coefficientCount}>;
     for (var i = 0; i < ${coefficientCount}; i++) {
         coefficients[i] = unpackSHTriplet(i, s.uv);
@@ -108,12 +116,20 @@ struct SplatValueUniforms {
     colorMatchIndex: u32,
     colorMatchThreshold: f32,
     // [custom] depth selection far plane (0 = off), see color-match.ts
-    depthFar: f32
+    depthFar: f32,
+    // [custom] colour selection (M4): metric 0 = RGB per channel, 1 = HSV,
+    // 2 = OKLab; reference count; HSV term weights. see color-match.ts
+    colorMetric: i32,
+    colorRefCount: u32,
+    hsvWeightH: f32,
+    hsvWeightS: f32,
+    hsvWeightV: f32
 }
 
 struct SplatValue {
     uv: vec2i,
     colorIndex: u32,
+    paletteIndex: u32,
     selected: bool,
     visible: bool,
     localPos: vec3f,
@@ -134,6 +150,52 @@ fn rgbToHsv(color: vec3f) -> vec3f {
     let q = select(vec4f(p.xyw, color.r), vec4f(color.r, p.yzx), color.r >= p.x);
     let d = q.x - min(q.w, q.y);
     return vec3f(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x);
+}
+
+// [custom] colour selection metrics (M4). Splat colours are display (sRGB)
+// values; OKLab needs linear light first.
+fn srgbToLinear(color: vec3f) -> vec3f {
+    let low = color / 12.92;
+    let high = pow((color + 0.055) / 1.055, vec3f(2.4));
+    return select(high, low, color <= vec3f(0.04045));
+}
+
+fn rgbToOklab(color: vec3f) -> vec3f {
+    let c = srgbToLinear(color);
+    let l = pow(max(0.0, 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b), 1.0 / 3.0);
+    let m = pow(max(0.0, 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b), 1.0 / 3.0);
+    let s = pow(max(0.0, 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b), 1.0 / 3.0);
+    return vec3f(
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+    );
+}
+
+// a display colour in the active metric's space (uniforms.colorMetric)
+fn colorMetricSpace(color: vec3f) -> vec3f {
+    if (uniforms.colorMetric == 1) { return rgbToHsv(color); }
+    if (uniforms.colorMetric == 2) { return rgbToOklab(color); }
+    return color;
+}
+
+// distance of two colours already in metric space; 0..~1 for every metric so
+// one tolerance slider serves all three
+fn colorMetricDistance(a: vec3f, b: vec3f) -> f32 {
+    if (uniforms.colorMetric == 1) {
+        // hue is circular and meaningless for unsaturated colours: the wrapped
+        // hue difference (0..0.5, doubled) is scaled by the lesser saturation
+        var hue = abs(a.x - b.x);
+        hue = min(hue, 1.0 - hue) * 2.0 * min(a.y, b.y);
+        let d = vec3f(hue * uniforms.hsvWeightH, (a.y - b.y) * uniforms.hsvWeightS, (a.z - b.z) * uniforms.hsvWeightV);
+        return length(d);
+    }
+    if (uniforms.colorMetric == 2) {
+        return distance(a, b);
+    }
+    // rgb: the largest per-channel difference (upstream threshold semantics)
+    let d = abs(a - b);
+    return max(d.x, max(d.y, d.z));
 }
 
 fn signedLog1p(value: f32) -> f32 {
@@ -171,6 +233,7 @@ fn readSplat(index: u32, value: ptr<function, SplatValue>) -> bool {
     }
     (*value).uv = uv;
     (*value).colorIndex = paletteWord >> 16u;
+    (*value).paletteIndex = paletteWord & 0xffffu;
     (*value).selected = state == 1;
     (*value).visible = visible;
     (*value).localPos = localPos;
@@ -226,6 +289,9 @@ fn computeSplatValue(index: u32, valueOut: ptr<function, f32>, selectedOut: ptr<
         if (uniforms.propMode == 18) { value *= 360.0; }
     } ${shDispatch} else if (uniforms.propMode >= 66 && uniforms.propMode <= 68) {
         value = (textureLoad(splatColor, s.uv, 0).rgb[uniforms.propMode - 66] - 0.5) / 0.28209479177387814;
+    } else if (uniforms.propMode >= 69 && uniforms.propMode <= 71) {
+        // [custom] OKLab L / a / b of the final colour (M4)
+        value = rgbToOklab(clamp(readFinalColor(s), vec3f(0.0), vec3f(1.0)))[uniforms.propMode - 69];
     }
     if (uniforms.logBins != 0u) {
         value = signedLog1p(value);

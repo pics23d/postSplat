@@ -81,15 +81,13 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let alpha = f32((b >> 16u) & 0xffu) / 255.0;
     let flags = (b >> 24u) & 3u;
     // [custom] beyond the depth selection far plane: darkened (below), no
-    // rings, and skipped by gated pick passes (selection); ungated depth picks
-    // (focus) still see it
+    // rings, and skipped by gated passes (selection picks and the colour
+    // sampling render); ungated depth picks (focus) still see it
     let outside = ((b >> 26u) & 1u) != 0u;
-    #ifdef PICK_PASS
-        if (uniform.depthGate != 0u && outside) {
-            output.position = discardPosition;
-            return output;
-        }
-    #endif
+    if (uniform.depthGate != 0u && outside) {
+        output.position = discardPosition;
+        return output;
+    }
     // a zero-alpha splat is invisible to the gaussian pass but is still a real,
     // editable splat: keep its quad wherever rings mode would draw its ring band
     // (mirroring the fragment shader's eligibility test) so it renders and picks

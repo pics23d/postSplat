@@ -121,20 +121,20 @@ expect('far 7: both planes', await rectSelect(), 8192);
 await fire('selection.setDepthFar', 3);
 expect('far 3: nothing', await rectSelect(), 0);
 
-// eyedropper: the reference pick is gated (far 3 -> no pick -> nothing changes),
-// the match kernel is gated (threshold 1 matches every colour within the plane)
+// eyedropper (M4 api): the sample pick is gated (far 3 -> no sample), the
+// match kernel is gated (rgb tolerance 1 matches every colour within the plane)
 await fire('select.none');
-await invoke('select.colorMatch', 'set', { x: 0.5, y: 0.5 }, 0.1);
-await sleep(150);
-expect('far 3, eyedropper at centre: reference pick gated', (await splatState()).selected, 0);
+expect('far 3, eyedropper at centre: sample pick gated', await invoke('select.colorSample', { x: 0.5, y: 0.5 }), null);
+// the event resolves to the SelectOp, which CDP cannot serialize: await it in-page
+const matchAny = () => evaluate(`window.scene.events.invoke('select.colorMatch', 'set', [[0.9, 0.2, 0.2]], { metric: 'rgb', tolerance: 1 }).then(op => op !== null)`, true);
 await fire('selection.setDepthFar', 5);
-await invoke('select.colorMatch', 'set', { x: 0.5, y: 0.5 }, 1);
+await matchAny();
 await sleep(150);
-expect('far 5, eyedropper threshold 1: front plane only', (await splatState()).selected, 4096);
+expect('far 5, eyedropper tolerance 1: front plane only', (await splatState()).selected, 4096);
 await fire('selection.setDepthFar', 7);
-await invoke('select.colorMatch', 'set', { x: 0.5, y: 0.5 }, 1);
+await matchAny();
 await sleep(150);
-expect('far 7, eyedropper threshold 1: both planes', (await splatState()).selected, 8192);
+expect('far 7, eyedropper tolerance 1: both planes', (await splatState()).selected, 8192);
 
 // unset plane = focal distance (4 here) and Alt+wheel stepping from it
 await fire('select.none');

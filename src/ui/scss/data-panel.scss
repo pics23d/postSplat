@@ -129,6 +129,44 @@
     left: 0;
 }
 
+// [custom] reference markers over the histogram (eyedropper chips, M4):
+// a second overlay so the drag highlight can hide its own SVG freely
+#histogram-markers-svg {
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    overflow: visible;
+}
+
+// [custom] continuous colour ramp beneath the histogram for the colour axes
+// (final colour channels, HSV, OKLab, raw DC): what colour each position of
+// the axis stands for, with the eyedropper's references marked on it (M4)
+#histogram-color-bar {
+    position: relative;
+    flex: 0 0 14px;
+    height: 14px;
+    background-color: $bcg-darker;
+
+    > canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    > svg {
+        pointer-events: none;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: visible;
+    }
+}
+
 // row pinned beneath the histogram canvas: min on the left, max on the right,
 // and the hovered/drag-range readout positioned horizontally to track the
 // pointer x. pointer-events: none so it never blocks the canvas.

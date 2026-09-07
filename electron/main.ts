@@ -32,6 +32,9 @@ const USER_DATA_DIR = argValue('user-data-dir');
 const TEST_DIR = argValue('test-dir');
 const TEST_OPEN = argValue('test-open')?.split(';').filter(Boolean);
 
+// a harness profile still opens where the user keeps the app: its window
+// state falls back to the default profile's (user request 2026-09-06)
+const DEFAULT_USER_DATA = app.getPath('userData');
 if (USER_DATA_DIR) {
     app.setPath('userData', path.resolve(USER_DATA_DIR));
 }
@@ -79,13 +82,16 @@ const DEFAULT_WINDOW: WindowState = { width: 1600, height: 1000 };
 const windowStateFile = () => path.join(app.getPath('userData'), 'window-state.json');
 
 const loadWindowState = (): WindowState => {
-    try {
-        const state = JSON.parse(fs.readFileSync(windowStateFile(), 'utf8'));
-        if (Number.isFinite(state.width) && Number.isFinite(state.height) && state.width >= 400 && state.height >= 300) {
-            return state;
+    const candidates = [windowStateFile(), path.join(DEFAULT_USER_DATA, 'window-state.json')];
+    for (const file of candidates) {
+        try {
+            const state = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (Number.isFinite(state.width) && Number.isFinite(state.height) && state.width >= 400 && state.height >= 300) {
+                return state;
+            }
+        } catch {
+            // first launch or unreadable file
         }
-    } catch {
-        // first launch or unreadable file
     }
     return { ...DEFAULT_WINDOW };
 };

@@ -634,7 +634,10 @@ class ProjectedSplatRenderer {
         const minPixelSize = forPick ? 0 : (events.invoke('view.minPixelSize') as number) ?? 0;
         // [custom] depth selection far plane (0 = off) and the fade beyond it
         const depthFar = (events.invoke('selection.effectiveDepthFar') as number) ?? 0;
-        const depthFade = (events.invoke('selection.depthFade') as number) ?? 1;
+        // [custom] the colour-sampling render (render.clean): untinted colours,
+        // and splats beyond the plane are gated out instead of darkened
+        const clean = !!events.invoke('render.clean');
+        const depthFade = clean ? 1 : ((events.invoke('selection.depthFade') as number) ?? 1);
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
@@ -774,6 +777,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('cacheB', this.cacheB);
         this.material.setParameter('cacheWidth', this.cacheWidth);
         this.finishPick();
+        this.material.setParameter('depthGate', clean ? 1 : 0); // [custom]
         this.material.setParameter('viewportSize', [
             targetSize.width,
             targetSize.height,
@@ -785,8 +789,8 @@ class ProjectedSplatRenderer {
         // the edit view switch (tab) shows the raw scene: gaussians render
         // regardless of the profile flag and the non-selection rings hide
         const editView = events.invoke('view.editView');
-        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
-        this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
+        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending || clean ? 1 : 0);
+        this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending && !clean ? 1 : 0);
         const showAllRings = events.invoke('view.rings') && editView;
         const showSelectedRings = events.invoke('view.selectionRings') &&
             (selectedSplat?.instances.numSelected ?? 0) > 0;
@@ -799,13 +803,13 @@ class ProjectedSplatRenderer {
         // shader applies them inside the selection entry range (ringsBase /
         // ringsCount), which stands in for the projector's per-placement
         // selectionEnabled
-        this.material.setParameter('selectedColor', events.invoke('view.selectionColor') && !pending ? [
+        this.material.setParameter('selectedColor', events.invoke('view.selectionColor') && !pending && !clean ? [
             selectedColor.r,
             selectedColor.g,
             selectedColor.b,
             events.invoke('view.splatsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
         ] : [0, 0, 0, 0]);
-        this.material.setParameter('unselectedColor', !pending ? [
+        this.material.setParameter('unselectedColor', !pending && !clean ? [
             unselectedColor.r,
             unselectedColor.g,
             unselectedColor.b,

@@ -13,7 +13,7 @@ import {
 import { BufferPool } from './buffer-pool';
 import { CalcBound } from './calc-bound';
 import { CalcHistogram, CalcHistogramOptions } from './calc-histogram';
-import { ColorMatch } from './color-match';
+import { ColorMatch, ColorMatchParams } from './color-match';
 import { Intersect, IntersectOptions } from './intersect';
 import { SelectByRange, SelectByRangeOptions } from './select-by-range';
 import { SplatValueOptions } from './splat-value-compute';
@@ -89,10 +89,11 @@ class DataProcessor {
         return this.selectByRangeImpl.run(splat, mode, options, this.bufferPool);
     }
 
-    // compare final, view-dependent splat colors on the GPU and return an
-    // owned per-splat byte mask the caller must release via releaseMask().
-    colorMatch(splat: Splat, index: number, threshold: number, options: SplatValueOptions) {
-        return this.colorMatchImpl.run(splat, index, threshold, options, this.bufferPool);
+    // [custom] (M4) compare final, view-dependent splat colors against a list of
+    // reference colours (rgb triples) on the GPU and return an owned per-splat
+    // byte mask the caller must release via releaseMask().
+    colorMatch(splat: Splat, refs: Float32Array, params: ColorMatchParams, options: SplatValueOptions) {
+        return this.colorMatchImpl.run(splat, refs, params, options, this.bufferPool);
     }
 
     // release a mask buffer returned by intersect(), selectByRange() or
@@ -117,5 +118,5 @@ class DataProcessor {
 }
 
 export { DataProcessor };
-export type { IntersectOptions, CalcHistogramOptions, SelectByRangeOptions };
+export type { IntersectOptions, CalcHistogramOptions, SelectByRangeOptions, ColorMatchParams };
 export { MaskOptions, RectOptions, SphereOptions, BoxOptions, SphereBrushOptions } from './intersect';

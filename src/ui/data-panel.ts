@@ -5,6 +5,7 @@ import { Element } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
 import { Histogram } from './histogram';
+import { axisColor, axisValueOf, chromaGainFor, isColorAxisMode, rgbToHsv, Rgb } from './histogram-color-bar';
 import { i18n } from './localization';
 import { Tooltips } from './tooltips';
 
@@ -37,6 +38,10 @@ const PROP_MODE: { [key: string]: number } = {
     hue: 18,
     saturation: 19,
     value: 20,
+    // [custom] OKLab of the final colour (M4)
+    'oklab-l': 69,
+    'oklab-a': 70,
+    'oklab-b': 71,
     f_dc_0: 66,
     f_dc_1: 67,
     f_dc_2: 68
@@ -57,7 +62,7 @@ const propModeFor = (prop: string): number | undefined => {
 // final-color (DC + evaluated SH for current view direction) — depends on
 // world-space splat position, camera position and ColorGrade.
 const isFinalColorMode = (mode: number) => {
-    return (mode >= 5 && mode <= 7) || (mode >= 18 && mode <= 20);
+    return (mode >= 5 && mode <= 7) || (mode >= 18 && mode <= 20) || (mode >= 69 && mode <= 71);
 };
 
 // what kinds of state changes affect a given prop's histogram. mirrors the
@@ -267,7 +272,10 @@ class DataPanel extends Container {
                 'surface-area': i18n.t('panel.splat-data.surface-area'),
                 hue: i18n.t('panel.splat-data.hue'),
                 saturation: i18n.t('panel.splat-data.saturation'),
-                value: i18n.t('panel.splat-data.value')
+                value: i18n.t('panel.splat-data.value'),
+                'oklab-l': i18n.t('panel.splat-data.oklab-l'),
+                'oklab-a': i18n.t('panel.splat-data.oklab-a'),
+                'oklab-b': i18n.t('panel.splat-data.oklab-b')
             };
 
             // "Show All" extras: raw DC coefficients first, then spherical
@@ -290,7 +298,7 @@ class DataPanel extends Container {
             }
 
             const dataProps = [...splat.resource.propertyNames];
-            const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'red', 'green', 'blue', 'hue', 'saturation', 'value'];
+            const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'red', 'green', 'blue', 'hue', 'saturation', 'value', 'oklab-l', 'oklab-a', 'oklab-b'];
             const availableProps = new Set(dataProps.concat(derivedProps));
 
             // build ordered default props from localizations keys, filtered to available
@@ -410,6 +418,26 @@ class DataPanel extends Container {
         histogramCanvasArea.appendChild(statsOverlay);
 
         histogramContainer.dom.appendChild(histogramCanvasArea);
+
+        // [custom] reference markers (eyedropper chips) drawn over the bars
+        const markersSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        markersSvg.setAttribute('id', 'histogram-markers-svg');
+        histogramCanvasArea.appendChild(markersSvg);
+
+        // [custom] continuous colour ramp for the colour axes, with the same
+        // references marked on it; hidden for every other property
+        const colorBar = document.createElement('div');
+        colorBar.id = 'histogram-color-bar';
+        colorBar.style.display = 'none';
+        const colorBarCanvas = document.createElement('canvas');
+        colorBarCanvas.width = 256;
+        colorBarCanvas.height = 1;
+        const colorBarContext = colorBarCanvas.getContext('2d');
+        const colorBarImage = colorBarContext.createImageData(colorBarCanvas.width, 1);
+        const colorBarSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        colorBar.appendChild(colorBarCanvas);
+        colorBar.appendChild(colorBarSvg);
+        histogramContainer.dom.appendChild(colorBar);
 
         // info row pinned underneath the histogram canvas. min sits left, max
         // sits right. while hovering, the cursor label slides along to show
@@ -545,6 +573,98 @@ class DataPanel extends Container {
             return v.toFixed(3);
         };
 
+        // [custom] the eyedropper's current reference colours (select.colorRefs)
+        let colorRefs: Rgb[] = [];
+
+        // the saturation ramp needs a hue: the first reference's, else red
+        const referenceHue = () => (colorRefs.length ? rgbToHsv(colorRefs[0])[0] : 0);
+
+        // fraction of the axis for a (linear) value, honouring log bins
+        const unitOf = (value: number) => {
+            const h = histogram.histogram;
+            const transformed = h.logBins ? Math.sign(value) * Math.log1p(Math.abs(value)) : value;
+            return h.maxValue === h.minValue ? 0.5 : (transformed - h.minValue) / (h.maxValue - h.minValue);
+        };
+
+        const toHex = (c: Rgb) => `#${c.map(v => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join('')}`;
+
+        const drawColorBar = () => {
+            const h = histogram.histogram;
+            const mode = lastGpuMode;
+            if (!h.numValues || !isColorAxisMode(mode)) {
+                colorBar.style.display = 'none';
+                return;
+            }
+            const hue = referenceHue();
+            const gain = chromaGainFor(h.valueAt(0), h.valueAt(1));
+            const pixels = colorBarImage.data;
+            const width = colorBarCanvas.width;
+            for (let x = 0; x < width; x++) {
+                const [r, g, b] = axisColor(mode, h.valueAt((x + 0.5) / width), hue, gain);
+                pixels[x * 4] = Math.round(r * 255);
+                pixels[x * 4 + 1] = Math.round(g * 255);
+                pixels[x * 4 + 2] = Math.round(b * 255);
+                pixels[x * 4 + 3] = 255;
+            }
+            colorBarContext.putImageData(colorBarImage, 0, 0);
+            colorBar.style.display = '';
+        };
+
+        // a marker per reference: a line through the bars and a pointer on the
+        // ramp, both in the chip's colour with a dark outline so they read on
+        // any background. References outside the axis range sit on its edge.
+        const drawMarkers = () => {
+            markersSvg.replaceChildren();
+            colorBarSvg.replaceChildren();
+            const h = histogram.histogram;
+            const mode = lastGpuMode;
+            if (!h.numValues || !isColorAxisMode(mode)) return;
+            const ns = markersSvg.namespaceURI;
+            colorRefs.forEach((color) => {
+                const value = axisValueOf(mode, color);
+                if (value === undefined) return;
+                const x = `${(Math.min(1, Math.max(0, unitOf(value))) * 100).toFixed(2)}%`;
+                const fill = toHex(color);
+
+                const halo = document.createElementNS(ns, 'line');
+                halo.setAttribute('x1', x);
+                halo.setAttribute('x2', x);
+                halo.setAttribute('y1', '0');
+                halo.setAttribute('y2', '100%');
+                halo.setAttribute('stroke', 'rgba(0, 0, 0, 0.7)');
+                halo.setAttribute('stroke-width', '3');
+                markersSvg.appendChild(halo);
+
+                const line = document.createElementNS(ns, 'line');
+                line.setAttribute('x1', x);
+                line.setAttribute('x2', x);
+                line.setAttribute('y1', '0');
+                line.setAttribute('y2', '100%');
+                line.setAttribute('stroke', fill);
+                line.setAttribute('stroke-width', '1');
+                markersSvg.appendChild(line);
+
+                // a small chip standing on the ramp at the reference's position
+                const marker = document.createElementNS(ns, 'rect');
+                marker.setAttribute('x', x);
+                marker.setAttribute('y', '2');
+                marker.setAttribute('width', '8');
+                marker.setAttribute('height', '10');
+                marker.setAttribute('rx', '2');
+                marker.setAttribute('transform', 'translate(-4, 0)');
+                marker.setAttribute('fill', fill);
+                marker.setAttribute('stroke', '#000');
+                marker.setAttribute('stroke-width', '1');
+                colorBarSvg.appendChild(marker);
+            });
+        };
+
+        events.on('select.colorRefs', (refs: Rgb[]) => {
+            colorRefs = refs;
+            drawColorBar();
+            drawMarkers();
+        });
+
         const refreshRange = () => {
             const h = histogram.histogram;
             if (!h.numValues) {
@@ -554,6 +674,8 @@ class DataPanel extends Container {
                 histogramInfoMin.textContent = formatValue(h.valueAt(0));
                 histogramInfoMax.textContent = formatValue(h.valueAt(1));
             }
+            drawColorBar();
+            drawMarkers();
         };
         refreshRange();
 
