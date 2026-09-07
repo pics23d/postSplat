@@ -292,6 +292,11 @@ fn computeSplatValue(index: u32, valueOut: ptr<function, f32>, selectedOut: ptr<
     } else if (uniforms.propMode >= 69 && uniforms.propMode <= 71) {
         // [custom] OKLab L / a / b of the final colour (M4)
         value = rgbToOklab(clamp(readFinalColor(s), vec3f(0.0), vec3f(1.0)))[uniforms.propMode - 69];
+    } else if (uniforms.propMode == 72) {
+        // [custom] largest of the three scale axes: thin / pointy splats sort
+        // to the far right regardless of which axis carries the length
+        let scale = textureLoad(transformB, s.uv, 0).xyz;
+        value = max(scale.x, max(scale.y, scale.z));
     }
     if (uniforms.logBins != 0u) {
         value = signedLog1p(value);

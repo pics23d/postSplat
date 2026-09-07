@@ -141,6 +141,7 @@
     "panel.splat-data.green": "Green",
     "panel.splat-data.blue": "Blue",
     "panel.splat-data.scale": "Scale",
+    "panel.splat-data.scale-largest": "Scale Largest",
     "panel.splat-data.quaternion": "Quaternion",
     "panel.splat-data.distance": "Distance",
     "panel.splat-data.camera-depth": "Camera Depth",

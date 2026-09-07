@@ -42,6 +42,8 @@ const PROP_MODE: { [key: string]: number } = {
     'oklab-l': 69,
     'oklab-a': 70,
     'oklab-b': 71,
+    // [custom] max(scale x, y, z)
+    'scale-largest': 72,
     f_dc_0: 66,
     f_dc_1: 67,
     f_dc_2: 68
@@ -259,6 +261,7 @@ class DataPanel extends Container {
                 red: i18n.t('panel.splat-data.red'),
                 green: i18n.t('panel.splat-data.green'),
                 blue: i18n.t('panel.splat-data.blue'),
+                'scale-largest': i18n.t('panel.splat-data.scale-largest'),
                 scale_0: `${i18n.t('panel.splat-data.scale')} X`,
                 scale_1: `${i18n.t('panel.splat-data.scale')} Y`,
                 scale_2: `${i18n.t('panel.splat-data.scale')} Z`,
@@ -298,7 +301,7 @@ class DataPanel extends Container {
             }
 
             const dataProps = [...splat.resource.propertyNames];
-            const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'red', 'green', 'blue', 'hue', 'saturation', 'value', 'oklab-l', 'oklab-a', 'oklab-b'];
+            const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'scale-largest', 'red', 'green', 'blue', 'hue', 'saturation', 'value', 'oklab-l', 'oklab-a', 'oklab-b'];
             const availableProps = new Set(dataProps.concat(derivedProps));
 
             // build ordered default props from localizations keys, filtered to available

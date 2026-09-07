@@ -141,6 +141,7 @@
     "panel.splat-data.green": "Зелёный",
     "panel.splat-data.blue": "Синий",
     "panel.splat-data.scale": "Масштаб",
+    "panel.splat-data.scale-largest": "Макс. масштаб",
     "panel.splat-data.quaternion": "Кватернион",
     "panel.splat-data.distance": "Расстояние",
     "panel.splat-data.camera-depth": "Глубина камеры",

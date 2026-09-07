@@ -141,6 +141,7 @@
     "panel.splat-data.green": "緑",
     "panel.splat-data.blue": "青",
     "panel.splat-data.scale": "スケール",
+    "panel.splat-data.scale-largest": "スケール最大",
     "panel.splat-data.quaternion": "クォータニオン",
     "panel.splat-data.distance": "距離",
     "panel.splat-data.camera-depth": "カメラ深度",

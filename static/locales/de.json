@@ -141,6 +141,7 @@
     "panel.splat-data.green": "Grün",
     "panel.splat-data.blue": "Blau",
     "panel.splat-data.scale": "Größe",
+    "panel.splat-data.scale-largest": "Größe größte Achse",
     "panel.splat-data.quaternion": "Quaternion",
     "panel.splat-data.distance": "Entfernung",
     "panel.splat-data.camera-depth": "Kameratiefe",
