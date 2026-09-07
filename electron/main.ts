@@ -33,8 +33,11 @@ const TEST_DIR = argValue('test-dir');
 const TEST_OPEN = argValue('test-open')?.split(';').filter(Boolean);
 
 // a harness profile still opens where the user keeps the app: its window
-// state falls back to the default profile's (user request 2026-09-06)
-const DEFAULT_USER_DATA = app.getPath('userData');
+// state falls back to the default profile's (user request 2026-09-06).
+// --user-data-dir is also a native Chromium switch, so app.getPath('userData')
+// already points at the harness profile here; rebuild the default location
+// (appData/<app name>) instead of asking for it (bug found 2026-09-07).
+const DEFAULT_USER_DATA = path.join(app.getPath('appData'), app.name);
 if (USER_DATA_DIR) {
     app.setPath('userData', path.resolve(USER_DATA_DIR));
 }
