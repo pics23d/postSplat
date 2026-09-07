@@ -58,6 +58,37 @@ await (async () => {
     out.afterYaw = pose();
     await drive({ kind: 'translation', tx: 0, ty: 0, tz: -1 }, 400);
     out.afterLift = pose();
+    // settle contract: once the puck rests (zero reports, device still within its
+    // TTL) the scene must render its clean sorted resolve frame. 'auto' stochastic
+    // with a tiny engage threshold makes the moving frames stochastic on any scene
+    const savedStochastic = ev.invoke('view.stochastic');
+    const savedEngageMs = window.scene.autoEngageMs;
+    window.scene.autoEngageMs = 0.1;
+    ev.fire('view.setStochastic', 'auto');
+    // engagement follows the asynchronous profiler report of a sorted frame:
+    // render sorted frames until it lands
+    for (let i = 0; i < 10 && !window.scene.autoEngaged; i++) {
+        window.scene.forceRender = true;
+        await new Promise(r => setTimeout(r, 200));
+    }
+    // sampled during the push: drive() waits past the device TTL, by which time
+    // the clean resolve frame has already replaced the stochastic ones
+    let movingStochastic = false;
+    await new Promise((res) => {
+        const start = performance.now();
+        const id = setInterval(() => {
+            st.apply({ kind: 'translation', tx: 0, ty: -1, tz: 0 });
+            movingStochastic = movingStochastic || window.scene.frameTimings.stochastic;
+            if (performance.now() - start > 400) { clearInterval(id); res(); }
+        }, 8);
+    });
+    // a hand resting on the puck: reports keep coming inside the dead zone
+    await drive({ kind: 'translation', tx: 0, ty: -instance.tuning.deadzone * 0.3, tz: 0 }, 800);
+    await new Promise(r => setTimeout(r, 600));
+    out.settle = { movingStochastic, restingStochastic: window.scene.frameTimings.stochastic };
+    window.scene.autoEngageMs = savedEngageMs;
+    ev.fire('view.setStochastic', savedStochastic);
+    window.scene.forceRender = true;
     instance.tuning.enabled = wasEnabled;
     if (restore) restore();
     return out;
@@ -99,11 +130,18 @@ const liftDelta = [0, 1, 2].map(i => r.afterLift.pos[i] - r.afterYaw.pos[i]);
 if (liftDelta[1] < 0.2) failures.push(`lift: moved up only ${liftDelta[1]}`);
 if (Math.hypot(liftDelta[0], liftDelta[2]) > 1e-3) failures.push('lift: moved horizontally');
 
+// settle: a hand resting on the puck (reports inside the dead zone) must not keep
+// the stochastic path engaged - the clean resolve frame has to be the last one
+// rendered (user report 2026-09-06: "pointy" splats after using the puck)
+if (!r.settle.movingStochastic) failures.push('settle: the moving frames were not stochastic (auto mode did not engage; is the GPU profiler available?)');
+if (r.settle.restingStochastic) failures.push('settle: the last frame after the puck came to rest is still stochastic');
+
 console.log(JSON.stringify({
     tuning: { flySpeed: r.flySpeed, scale: r.scale, rotationScale: r.rotationScale, focalDistance: r.focalDistance },
     forward: { camDelta, mode: r.afterForward.mode },
     yaw: { azimDelta, positionDrift: yawMoved },
-    lift: { delta: liftDelta }
+    lift: { delta: liftDelta },
+    settle: r.settle
 }, null, 2));
 
 if (failures.length) {

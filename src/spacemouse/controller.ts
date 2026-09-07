@@ -127,19 +127,29 @@ export class SpaceMouseController {
         const slow = (buttons & buttonBit('CTRL')) !== 0;
         const speedMod = fast ? 10 : (slow ? 0.1 : 1);
 
-        if (pitchDown !== 0 || yawRight !== 0) {
+        const rotating = pitchDown !== 0 || yawRight !== 0;
+        const translating = strafeRight !== 0 || flyForward !== 0 || moveUp !== 0;
+
+        if (rotating) {
             this.lastRotationTime = performance.now();
             const rotate = ROTATE_SPEED * tuning.rotationScale * dt;
             this.rotateAboutCamera(yawRight * rotate, pitchDown * rotate);
         }
 
-        if (strafeRight !== 0 || flyForward !== 0 || moveUp !== 0) {
+        if (translating) {
             const factor = TRANSLATE_SPEED * this.camera.focalDistance * this.camera.flySpeed * tuning.scale * speedMod * dt;
             this.translate(strafeRight * factor, flyForward * factor, moveUp * factor);
         }
 
-        // keep the cheap stochastic render path engaged, as a pointer drag would
-        scene.forceInteracting = true;
+        // keep the cheap stochastic render path engaged, as a pointer drag would -
+        // but only while the puck actually moves the camera. A report within its
+        // TTL keeps the device "active" after the puck is back at rest, and
+        // flagging interaction then made the scene's single clean resolve frame
+        // render stochastic and get consumed, leaving the noisy frame on screen
+        // until the next unrelated render (user report 2026-09-06, "pointy splats")
+        if (rotating || translating) {
+            scene.forceInteracting = true;
+        }
     }
 
     private rotateAboutCamera(yawDeg: number, pitchDeg: number) {
