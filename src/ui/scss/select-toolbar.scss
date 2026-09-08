@@ -64,6 +64,24 @@
         }
     }
 
+    // [custom] floater tool: the size slider runs over a normalized position
+    // (linear or log mapping) and its own numeric field is hidden; the real
+    // value shows in a separate field in front of it
+    > .select-toolbar-slider-bare {
+        width: 130px;
+
+        > .pcui-numeric-input {
+            display: none;
+        }
+    }
+
+    > .select-toolbar-number {
+        flex: 0 0 64px;
+        width: 64px;
+        min-width: 64px;
+        margin: 0px 6px 0px 0px;
+    }
+
     // the labels and text buttons never give way to the chips
     > .select-toolbar-label,
     > .select-toolbar-button {

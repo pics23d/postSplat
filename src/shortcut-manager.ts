@@ -51,6 +51,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'tool.sphereBrushSelection': { keys: ['b'], shift: 'required' },
     'tool.floodSelection': { keys: ['o'] },
     'tool.eyedropperSelection': { keys: ['e'], ctrl: 'required', capture: true },
+    'tool.floaterSelection': { keys: ['f'], ctrl: 'required', capture: true }, // [custom]
     'tool.brushSelection.smaller': { keys: ['['], repeat: true },
     'tool.brushSelection.bigger': { keys: [']'], repeat: true },
     // [custom] Esc clears the selection while a selection tool is active,

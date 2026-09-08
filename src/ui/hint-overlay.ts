@@ -87,6 +87,15 @@ class HintOverlay extends Container {
             { keys: word('hint.key-right-click'), localeKey: 'hint.context-menu' }
         ]);
 
+        // the floater tool is slider-driven: no gestures, the viewport still
+        // navigates, only the shared selection keys apply
+        const floater = section('popup.shortcuts.selection', [
+            { keys: shortcut('tool.escape'), localeKey: 'popup.shortcuts.deselect-all' },
+            { keys: shortcut('selection.toggleUseDepth'), localeKey: 'popup.shortcuts.toggle-depth' },
+            { keys: combo('Alt', 'hint.key-wheel'), localeKey: 'hint.depth-plane' },
+            { keys: word('hint.key-right-click'), localeKey: 'hint.context-menu' }
+        ]);
+
         const orbit = section('popup.shortcuts.navigation', [
             { keys: word('hint.key-drag'), localeKey: 'hint.orbit' },
             { keys: word('hint.key-right-drag'), localeKey: 'hint.pan' },
@@ -121,8 +130,10 @@ class HintOverlay extends Container {
         const update = () => {
             const selecting = activeTool !== null && SELECTION_TOOLS.has(activeTool);
             const sampling = activeTool === 'eyedropperSelection';
-            selection.container.hidden = !selecting || sampling;
+            const floating = activeTool === 'floaterSelection';
+            selection.container.hidden = !selecting || sampling || floating;
             eyedropper.container.hidden = !sampling;
+            floater.container.hidden = !floating;
             selection.byId.get('brush').hidden = !(activeTool !== null && BRUSH_TOOLS.has(activeTool));
             orbit.container.hidden = selecting || controlMode === 'fly';
             fly.container.hidden = selecting || controlMode !== 'fly';

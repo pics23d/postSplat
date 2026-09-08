@@ -82,6 +82,7 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'tool.sphereBrushSelection', localeKey: 'popup.shortcuts.sphere-brush-selection' },
             { id: 'tool.floodSelection', localeKey: 'popup.shortcuts.flood-selection' },
             { id: 'tool.eyedropperSelection', localeKey: 'popup.shortcuts.eyedropper-selection' },
+            { id: 'tool.floaterSelection', localeKey: 'popup.shortcuts.floater-selection' }, // [custom]
             { id: 'tool.escape', localeKey: 'popup.shortcuts.escape' }, // [custom]
             { id: 'tool.toggleCoordSpace', localeKey: 'popup.shortcuts.toggle-gizmo-coordinate-space' }
         ],

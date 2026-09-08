@@ -1131,6 +1131,66 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return result;
     };
 
+    // [custom] Floater selection (user CR 2026-09-08): floaters are large and
+    // faint, so one kernel ANDs "largest scale axis >= minScale" with
+    // "opacity <= maxOpacity" (the Scale Largest and Opacity histogram axes in
+    // one gesture). Honours the depth far plane like every viewport tool.
+    // select.floaterRange = the scene's range of largest scales (the size
+    // slider's span), from the histogram kernel's min / max
+    events.function('select.floaterRange', async () => {
+        const splats = selectedSplats();
+        let min = Infinity;
+        let max = -Infinity;
+        for (const splat of splats) {
+            const histogram = await scene.commandQueue.enqueue(() => scene.dataProcessor.calcHistogram(splat, 72, {
+                entityMatrix: splat.entity.getWorldTransform(),
+                viewMatrix: scene.camera.camera.viewMatrix,
+                cameraPos: scene.camera.position,
+                logBins: false
+            }));
+            if (histogram.numValues > 0) {
+                min = Math.min(min, histogram.min);
+                max = Math.max(max, histogram.max);
+            }
+        }
+        return Number.isFinite(min) ? { min, max } : null;
+    });
+
+    events.function('select.floaters', async (
+        op: 'add' | 'remove' | 'set' | 'intersect',
+        params: { minScale: number, maxOpacity: number }
+    ) => {
+        const splats = selectedSplats();
+        if (!splats.length) {
+            return null;
+        }
+        const depthFar = depthFarSnapshot();
+        const viewMatrix = scene.camera.camera.viewMatrix.clone();
+        const floaterParams = {
+            minScale: Math.max(0, Number.isFinite(params.minScale) ? params.minScale : 0),
+            maxOpacity: Math.min(1, Math.max(0, Number.isFinite(params.maxOpacity) ? params.maxOpacity : 1))
+        };
+
+        let result: SelectOp | null = null;
+        for (const splat of splats) {
+            // the op is built inside the queue so it sees the selection state
+            // after any undo that was queued before it (live preview)
+            const selectOp = await scene.commandQueue.enqueue(async () => {
+                const mask = await scene.dataProcessor.selectFloaters(splat, floaterParams, {
+                    entityMatrix: splat.entity.getWorldTransform(),
+                    viewMatrix,
+                    depthFar
+                });
+                const selectOp = new SelectOp(splat, op, mask);
+                scene.dataProcessor.releaseMask(mask);
+                return selectOp;
+            });
+            await editHistory.add(selectOp);
+            result = selectOp;
+        }
+        return result;
+    });
+
     events.function('select.colorMatch', (
         op: 'add' | 'remove' | 'set' | 'intersect',
         refs: number[][],

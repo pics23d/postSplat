@@ -10,6 +10,7 @@ import redoSvg from './svg/redo.svg';
 import boxSvg from './svg/select-box.svg';
 import brushSvg from './svg/select-brush.svg';
 import eyedropperSvg from './svg/select-eyedropper.svg';
+import floaterSvg from './svg/select-floater.svg'; // [custom]
 import floodSvg from './svg/select-flood.svg';
 import lassoSvg from './svg/select-lasso.svg';
 import pickerSvg from './svg/select-picker.svg';
@@ -277,6 +278,12 @@ class BottomToolbar extends Container {
             { tool: 'floodSelection', svg: floodSvg, localeKey: 'tooltip.bottom-toolbar.flood-selection' }
         ]);
 
+        // [custom] floater selection: size + opacity thresholds (user CR 2026-09-08)
+        const floater = new Button({
+            id: 'bottom-toolbar-floater',
+            class: 'bottom-toolbar-tool'
+        });
+
         const sphereBrush = new Button({
             id: 'bottom-toolbar-sphere-brush',
             class: 'bottom-toolbar-tool'
@@ -341,6 +348,7 @@ class BottomToolbar extends Container {
         redo.dom.appendChild(createSvg(redoSvg));
         picker.dom.appendChild(createSvg(pickerSvg));
         brush.dom.appendChild(createSvg(brushSvg));
+        floater.dom.appendChild(createSvg(floaterSvg)); // [custom]
         sphereBrush.dom.appendChild(createSvg(sphereBrushSvg));
         sphere.dom.appendChild(createSvg(sphereSvg));
         box.dom.appendChild(createSvg(boxSvg));
@@ -358,6 +366,7 @@ class BottomToolbar extends Container {
         this.append(brush);
         this.append(polygon);
         this.append(eyedropper);
+        this.append(floater); // [custom]
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphereBrush);
         this.append(sphere);
@@ -384,6 +393,7 @@ class BottomToolbar extends Container {
             events.fire('selection.toggleFootprint');
         });
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
+        floater.dom.addEventListener('click', () => events.fire('tool.floaterSelection')); // [custom]
         sphereBrush.dom.addEventListener('click', () => events.fire('tool.sphereBrushSelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
@@ -511,6 +521,7 @@ class BottomToolbar extends Container {
         events.on('tool.activated', (toolName: string) => {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
+            floater.class[toolName === 'floaterSelection' ? 'add' : 'remove']('active'); // [custom]
             sphereBrush.class[toolName === 'sphereBrushSelection' ? 'add' : 'remove']('active');
             sphere.class[toolName === 'sphereSelection' ? 'add' : 'remove']('active');
             box.class[toolName === 'boxSelection' ? 'add' : 'remove']('active');
@@ -532,6 +543,7 @@ class BottomToolbar extends Container {
         tooltips.register(footprintMode, tooltip('tooltip.bottom-toolbar.footprint', 'selection.toggleFootprint'));
         tooltips.register(picker, tooltip('tooltip.bottom-toolbar.rectangle-selection', 'tool.rectSelection'));
         tooltips.register(brush, tooltip('tooltip.bottom-toolbar.brush-selection', 'tool.brushSelection'));
+        tooltips.register(floater, tooltip('tooltip.bottom-toolbar.floater-selection', 'tool.floaterSelection')); // [custom]
         tooltips.register(sphereBrush, tooltip('tooltip.bottom-toolbar.sphere-brush-selection', 'tool.sphereBrushSelection'));
         tooltips.register(sphere, tooltip('tooltip.bottom-toolbar.sphere-selection'));
         tooltips.register(box, tooltip('tooltip.bottom-toolbar.box-selection'));

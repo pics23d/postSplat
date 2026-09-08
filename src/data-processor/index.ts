@@ -16,6 +16,7 @@ import { CalcHistogram, CalcHistogramOptions } from './calc-histogram';
 import { ColorMatch, ColorMatchParams } from './color-match';
 import { Intersect, IntersectOptions } from './intersect';
 import { SelectByRange, SelectByRangeOptions } from './select-by-range';
+import { SelectFloaters, FloaterParams } from './select-floaters'; // [custom]
 import { SplatValueOptions } from './splat-value-compute';
 import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
 import { Splat } from '../splat';
@@ -44,6 +45,7 @@ class DataProcessor {
     private calcHistogramImpl: CalcHistogram;
     private colorMatchImpl: ColorMatch;
     private selectByRangeImpl: SelectByRange;
+    private selectFloatersImpl: SelectFloaters; // [custom]
 
     constructor(device: GraphicsDevice) {
         this.device = device;
@@ -63,6 +65,7 @@ class DataProcessor {
         this.calcHistogramImpl = new CalcHistogram(device);
         this.colorMatchImpl = new ColorMatch(device);
         this.selectByRangeImpl = new SelectByRange(device);
+        this.selectFloatersImpl = new SelectFloaters(device); // [custom]
     }
 
     // calculate the intersection of a mask canvas with splat centers.
@@ -87,6 +90,12 @@ class DataProcessor {
     // returns an owned mask buffer the caller must release via releaseMask().
     selectByRange(splat: Splat, mode: number, options: SelectByRangeOptions) {
         return this.selectByRangeImpl.run(splat, mode, options, this.bufferPool);
+    }
+
+    // [custom] floater selection: largest scale axis >= minScale AND opacity
+    // <= maxOpacity, as an owned per-splat byte mask (release via releaseMask())
+    selectFloaters(splat: Splat, params: FloaterParams, options: SplatValueOptions) {
+        return this.selectFloatersImpl.run(splat, params, options, this.bufferPool);
     }
 
     // [custom] (M4) compare final, view-dependent splat colors against a list of
