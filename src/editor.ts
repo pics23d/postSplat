@@ -282,6 +282,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setShowInfo(!events.invoke('camera.showInfo'));
     });
 
+    // [custom] focus on the point under normalized screen coordinates (the
+    // context menu's "Focus on Point"; same as a double-click on the viewport)
+    events.on('camera.pickFocalPoint', (x: number, y: number) => {
+        if (scene.camera.controlMode === 'fly') {
+            events.fire('camera.setControlMode', 'orbit');
+        }
+        scene.camera.pickFocalPoint(x, y);
+    });
+
     // camera.focus
 
     events.on('camera.focus', () => {

@@ -24,6 +24,7 @@
 @use 'status-bar.scss';
 @use 'tool.scss';
 @use 'hint-overlay.scss'; // [custom]
+@use 'context-menu.scss'; // [custom]
 
 * {
     font-size: 12px;

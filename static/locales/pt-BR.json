@@ -264,6 +264,8 @@
     "popup.shortcuts.remove-from-selection": "Remover da Seleção",
     "hint.key-drag": "Arrastar",
     "hint.key-right-drag": "Arrastar com botão direito",
+    "hint.key-right-click": "Clique direito",
+    "hint.context-menu": "Menu",
     "hint.key-wheel": "Roda",
     "hint.key-double-click": "Duplo clique",
     "hint.key-click-drag": "Clique / arrastar",

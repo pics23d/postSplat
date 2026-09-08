@@ -64,6 +64,10 @@ class PointerController {
         const CLICK_DRAG_THRESHOLD = 4;
         let mmbStartX = 0, mmbStartY = 0, mmbDragged = false;
 
+        // [custom] right-button click-vs-drag tracking: a tap opens the context
+        // menu (contextMenu.open), a drag pans as before
+        let rmbStartX = 0, rmbStartY = 0, rmbDragged = false;
+
         // touch state
         let touches: { id: number, x: number, y: number}[] = [];
         let midx: number, midy: number, midlen: number;
@@ -82,6 +86,10 @@ class PointerController {
                     mmbStartX = x;
                     mmbStartY = y;
                     mmbDragged = false;
+                } else if (pressedButton === 2) { // [custom]
+                    rmbStartX = x;
+                    rmbStartY = y;
+                    rmbDragged = false;
                 }
             } else if (event.pointerType === 'touch') {
                 if (touches.length === 0) {
@@ -109,6 +117,16 @@ class PointerController {
                     // MMB tap (no significant movement) -> focus on cursor point (orbit only; fly uses MMB for zoom)
                     if (pressedButton === 1 && camera.controlMode === 'orbit' && !mmbDragged && event.type === 'pointerup') {
                         pickFocalPoint(event);
+                    }
+                    // [custom] RMB tap (no drag) -> context menu at the cursor
+                    if (pressedButton === 2 && !rmbDragged) {
+                        const rect = target.getBoundingClientRect();
+                        camera.scene.events.fire('contextMenu.open', {
+                            clientX: event.clientX,
+                            clientY: event.clientY,
+                            x: rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0.5,
+                            y: rect.height > 0 ? (event.clientY - rect.top) / rect.height : 0.5
+                        });
                     }
                     pressedButton = -1;
                     if (target.hasPointerCapture(event.pointerId)) {
@@ -143,6 +161,15 @@ class PointerController {
                 const dy = event.offsetY - y;
                 x = event.offsetX;
                 y = event.offsetY;
+
+                // [custom] the right button only starts panning past the click
+                // threshold, so a tap (context menu) never nudges the camera
+                if (pressedButton === 2 && !rmbDragged) {
+                    if (dist(event.offsetX, event.offsetY, rmbStartX, rmbStartY) < CLICK_DRAG_THRESHOLD) {
+                        return;
+                    }
+                    rmbDragged = true;
+                }
 
                 if (camera.controlMode === 'fly') {
                     // Fly mode: left-drag to look around, middle to zoom, right works same as orbit

@@ -11,6 +11,7 @@ import type { BlobReadSource } from '../io';
 import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
 import { CameraInfoOverlay } from './camera-info-overlay';
+import { ContextMenu } from './context-menu'; // [custom]
 import { ExportPopup } from './export-popup';
 import { HintOverlay } from './hint-overlay'; // [custom]
 import { ImageSettingsDialog } from './image-settings-dialog';
@@ -139,6 +140,7 @@ class EditorUI {
         // view axes container
         const viewCube = new ViewCube(events);
         canvasContainer.append(viewCube);
+        canvasContainer.append(new ContextMenu(events)); // [custom] last, so it paints above every panel
         events.on('prerender', (cameraMatrix: Mat4) => {
             viewCube.update(cameraMatrix);
         });

@@ -264,6 +264,8 @@
     "popup.shortcuts.remove-from-selection": "Убрать из выделения",
     "hint.key-drag": "Перетаскивание",
     "hint.key-right-drag": "Правая кнопка + перетаскивание",
+    "hint.key-right-click": "Правая кнопка",
+    "hint.context-menu": "Меню",
     "hint.key-wheel": "Колесо",
     "hint.key-double-click": "Двойной клик",
     "hint.key-click-drag": "Клик / перетаскивание",

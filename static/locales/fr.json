@@ -264,6 +264,8 @@
     "popup.shortcuts.remove-from-selection": "Retirer de la sélection",
     "hint.key-drag": "Glisser",
     "hint.key-right-drag": "Glisser clic droit",
+    "hint.key-right-click": "Clic droit",
+    "hint.context-menu": "Menu",
     "hint.key-wheel": "Molette",
     "hint.key-double-click": "Double-clic",
     "hint.key-click-drag": "Clic / glisser",

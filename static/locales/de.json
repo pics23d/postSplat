@@ -264,6 +264,8 @@
     "popup.shortcuts.remove-from-selection": "Von Selektion entfernen",
     "hint.key-drag": "Ziehen",
     "hint.key-right-drag": "Rechts ziehen",
+    "hint.key-right-click": "Rechtsklick",
+    "hint.context-menu": "Menü",
     "hint.key-wheel": "Rad",
     "hint.key-double-click": "Doppelklick",
     "hint.key-click-drag": "Klick / Ziehen",

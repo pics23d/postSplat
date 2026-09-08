@@ -1,0 +1,12 @@
+// [custom] viewport context menu (src/ui/context-menu.ts). The container spans
+// the viewport without taking pointer events; the menu panels inside it are
+// positioned at the right-click and are interactive.
+#context-menu {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    .menu-panel {
+        pointer-events: auto;
+    }
+}

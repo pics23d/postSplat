@@ -264,6 +264,8 @@
     "popup.shortcuts.remove-from-selection": "선택 제거",
     "hint.key-drag": "드래그",
     "hint.key-right-drag": "우클릭 드래그",
+    "hint.key-right-click": "우클릭",
+    "hint.context-menu": "메뉴",
     "hint.key-wheel": "휠",
     "hint.key-double-click": "더블 클릭",
     "hint.key-click-drag": "클릭 / 드래그",

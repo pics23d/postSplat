@@ -71,7 +71,8 @@ class HintOverlay extends Container {
             { keys: combo('Shift', 'hint.key-wheel'), localeKey: 'popup.shortcuts.brush-size', id: 'brush' },
             { keys: shortcut('tool.escape'), localeKey: 'popup.shortcuts.deselect-all' },
             { keys: shortcut('selection.toggleUseDepth'), localeKey: 'popup.shortcuts.toggle-depth' },
-            { keys: combo('Alt', 'hint.key-wheel'), localeKey: 'hint.depth-plane' }
+            { keys: combo('Alt', 'hint.key-wheel'), localeKey: 'hint.depth-plane' },
+            { keys: word('hint.key-right-click'), localeKey: 'hint.context-menu' }
         ]);
 
         // the eyedropper is a sampling session (M4): clicks collect colour
@@ -82,7 +83,8 @@ class HintOverlay extends Container {
             { keys: combo('Shift', 'hint.key-click'), localeKey: 'hint.new-samples' },
             { keys: shortcut('tool.escape'), localeKey: 'popup.shortcuts.deselect-all' },
             { keys: shortcut('selection.toggleUseDepth'), localeKey: 'popup.shortcuts.toggle-depth' },
-            { keys: combo('Alt', 'hint.key-wheel'), localeKey: 'hint.depth-plane' }
+            { keys: combo('Alt', 'hint.key-wheel'), localeKey: 'hint.depth-plane' },
+            { keys: word('hint.key-right-click'), localeKey: 'hint.context-menu' }
         ]);
 
         const orbit = section('popup.shortcuts.navigation', [
@@ -93,7 +95,8 @@ class HintOverlay extends Container {
             { keys: combo('Shift', 'hint.key-wheel'), localeKey: 'hint.pan' },
             { keys: word('hint.key-double-click'), localeKey: 'hint.focus-point' },
             { keys: shortcut('camera.focus'), localeKey: 'popup.shortcuts.focus-camera' },
-            { keys: shortcut('camera.toggleControlMode'), localeKey: 'popup.shortcuts.toggle-control-mode' }
+            { keys: shortcut('camera.toggleControlMode'), localeKey: 'popup.shortcuts.toggle-control-mode' },
+            { keys: word('hint.key-right-click'), localeKey: 'hint.context-menu' }
         ]);
 
         const fly = section('popup.shortcuts.navigation', [
@@ -105,7 +108,8 @@ class HintOverlay extends Container {
             { keys: word('hint.key-wheel'), localeKey: 'hint.fly-wheel' },
             { keys: word('hint.key-right-drag'), localeKey: 'hint.pan' },
             { keys: word('hint.key-double-click'), localeKey: 'hint.focus-point' },
-            { keys: shortcut('camera.toggleControlMode'), localeKey: 'popup.shortcuts.toggle-control-mode' }
+            { keys: shortcut('camera.toggleControlMode'), localeKey: 'popup.shortcuts.toggle-control-mode' },
+            { keys: word('hint.key-right-click'), localeKey: 'hint.context-menu' }
         ]);
 
         // the overlay is built before the tool manager and camera register

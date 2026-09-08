@@ -264,6 +264,8 @@
     "popup.shortcuts.remove-from-selection": "从选择中移除",
     "hint.key-drag": "拖动",
     "hint.key-right-drag": "右键拖动",
+    "hint.key-right-click": "右键单击",
+    "hint.context-menu": "菜单",
     "hint.key-wheel": "滚轮",
     "hint.key-double-click": "双击",
     "hint.key-click-drag": "点击 / 拖动",

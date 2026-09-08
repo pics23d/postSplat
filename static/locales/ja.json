@@ -264,6 +264,8 @@
     "popup.shortcuts.remove-from-selection": "選択解除",
     "hint.key-drag": "ドラッグ",
     "hint.key-right-drag": "右ドラッグ",
+    "hint.key-right-click": "右クリック",
+    "hint.context-menu": "メニュー",
     "hint.key-wheel": "ホイール",
     "hint.key-double-click": "ダブルクリック",
     "hint.key-click-drag": "クリック / ドラッグ",

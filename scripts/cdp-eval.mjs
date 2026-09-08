@@ -22,6 +22,9 @@ let drag = null;
 let typeText = null;
 const keys = [];
 let timeoutMs = 15000;
+// mouse button for --click / --drag (left, middle, right); Chromium's buttons mask
+let button = 'left';
+const BUTTON_MASK = { left: 1, right: 2, middle: 4 };
 
 // a native modal dialog in the main process stalls CDP; never hang the harness on it
 setTimeout(() => {
@@ -45,6 +48,9 @@ for (let i = 0; i < args.length; i++) {
     } else if (args[i] === '--drag') {
         // synthesize a left drag x1,y1,x2,y2 (css px): press, 24 moves, release
         drag = args[++i].split(',').map(Number);
+    } else if (args[i] === '--button') {
+        // mouse button for --click / --drag: left (default), middle or right
+        button = args[++i];
     } else if (args[i] === '--file') {
         // read the expression from a file (multi-statement probes without quoting
         // trouble; semicolons in an inline argument trip the permission matcher)
@@ -104,19 +110,19 @@ if (focus) {
 
 if (click) {
     const [x, y] = click;
-    for (const type of ['mousePressed', 'mouseReleased']) {
-        await call('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
-    }
+    await call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button, buttons: BUTTON_MASK[button], clickCount: 1 });
+    await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button, buttons: 0, clickCount: 1 });
 }
 
 if (drag) {
     const [x1, y1, x2, y2] = drag;
-    await call('Input.dispatchMouseEvent', { type: 'mousePressed', x: x1, y: y1, button: 'left', buttons: 1, clickCount: 1 });
+    const mask = BUTTON_MASK[button];
+    await call('Input.dispatchMouseEvent', { type: 'mousePressed', x: x1, y: y1, button, buttons: mask, clickCount: 1 });
     const steps = 24;
     for (let s = 1; s <= steps; s++) {
-        await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x1 + (x2 - x1) * s / steps, y: y1 + (y2 - y1) * s / steps, button: 'left', buttons: 1 });
+        await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x1 + (x2 - x1) * s / steps, y: y1 + (y2 - y1) * s / steps, button, buttons: mask });
     }
-    await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x2, y: y2, button: 'left', buttons: 0, clickCount: 1 });
+    await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x2, y: y2, button, buttons: 0, clickCount: 1 });
 }
 
 if (typeText !== null) {
