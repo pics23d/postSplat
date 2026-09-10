@@ -99,7 +99,7 @@ class SelectInvertOp extends StateOp {
     constructor(splat: Splat) {
         const state = splat.instances.flags;
         const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & State.locked) === 0), State.selected, BitOp.TOGGLE);
+        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & State.hidden) === 0), State.selected, BitOp.TOGGLE);
     }
 }
 
@@ -116,7 +116,7 @@ class SelectOp extends StateOp {
     //   set       — make selection match the hit mask (toggle valid splats whose
     //               current selection state differs from the mask). NOT a replace —
     //               the underlying BitOp is TOGGLE on the rows where selection and
-    //               hit disagree, which leaves the locked bit untouched.
+    //               hit disagree, which leaves the hidden bit untouched.
     //   intersect — keep only splats currently selected AND in the hit mask
     //               (clear the selected bit on selected splats that are not hit).
     constructor(splat: Splat, op: 'add' | 'remove' | 'set' | 'intersect', sel: Uint8Array | Uint32Array) {
@@ -125,7 +125,7 @@ class SelectOp extends StateOp {
         const isHit = sel instanceof Uint32Array ? sortedPredicate(sel) : (i: number) => sel[i] === 255;
 
         // single rule applied uniformly: only valid (clean or selected) splats
-        // are considered. consolidates the locked guard in one place so
+        // are considered. consolidates the hidden guard in one place so
         // each producer doesn't have to remember it for the 'set' (toggle) path.
         const valid = (i: number) => state[i] === 0 || state[i] === State.selected;
 
@@ -149,33 +149,56 @@ class SelectOp extends StateOp {
     }
 }
 
-class HideSelectionOp extends StateOp {
-    name = 'hideSelection';
+// [custom] Hide (user CR 2026-09-08, replaces upstream's Lock on the same bit):
+// every instance whose flags equal `from` moves to exactly `to`. A TOGGLE of
+// `from ^ to` over the predicate-equal ranges, so undo is the same toggle and
+// restores the bytes exactly (the strict-LIFO history guarantees the rows still
+// hold `to` when undo runs)
+class StateTransitionOp extends StateOp {
+    name = 'stateTransition';
 
-    constructor(splat: Splat) {
+    constructor(splat: Splat, from: number, to: number) {
         const state = splat.instances.flags;
         const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => state[i] === State.selected), State.locked, BitOp.SET);
+        super(splat, IndexRanges.fromPredicate(count, i => state[i] === from), from ^ to, BitOp.TOGGLE);
     }
 }
 
-class UnhideAllOp extends StateOp {
-    name = 'unhideAll';
+// selected -> hidden: the selection bit goes with it, so an unhide never re-selects
+class HideSelectedOp extends StateTransitionOp {
+    name = 'hideSelected';
 
     constructor(splat: Splat) {
-        const state = splat.instances.flags;
-        const count = splat.instances.count;
-        super(splat, IndexRanges.fromPredicate(count, i => (state[i] & State.locked) !== 0), State.locked, BitOp.CLEAR);
+        super(splat, State.selected, State.hidden);
     }
 }
+
+// clean -> hidden; the selection stays as it is
+class HideUnselectedOp extends StateTransitionOp {
+    name = 'hideUnselected';
+
+    constructor(splat: Splat) {
+        super(splat, 0, State.hidden);
+    }
+}
+
+// hidden -> clean, never selected. A file or an older session can carry
+// hidden + selected (3), so each value gets its own exact transition; empty
+// ones are dropped and the caller groups the rest into one history entry
+const unhideAllOps = (splat: Splat) => {
+    return [
+        new StateTransitionOp(splat, State.hidden, 0),
+        new StateTransitionOp(splat, State.hidden | State.selected, 0)
+    ].filter(op => !op.ranges.empty);
+};
 
 // Deleting removes the selected instances from the live list, order-preserving,
 // and retains their records so undo can put them back exactly where they were.
 // The recorded ranges stay meaningful for older ops because the edit history is
 // strict LIFO: nothing older is undone until this op has been.
 // The instances that selection-driven operations act on. Note the strict
-// equality: an instance that is both selected *and* locked is excluded, which is
-// what makes locked gaussians survive a delete. Shared so that duplicate and
+// equality: an instance that is both selected *and* hidden is excluded, which is
+// what makes hidden gaussians survive a delete. Shared so that duplicate and
 // separate copy exactly the set that separate then removes - deriving it twice
 // would let the two drift apart and silently duplicate or drop instances.
 const selectedRanges = (splat: Splat) => {
@@ -378,7 +401,7 @@ class SplatsColorOp {
         const all = instances.numSelected === 0;
         for (let i = 0; i < instances.count; ++i) {
             const f = flags[i];
-            if ((f & State.locked) === 0 && (all || (f & State.selected) !== 0)) {
+            if ((f & State.hidden) === 0 && (all || (f & State.selected) !== 0)) {
                 fn(i);
             }
         }
@@ -642,8 +665,10 @@ export {
     SelectNoneOp,
     SelectInvertOp,
     SelectOp,
-    HideSelectionOp,
-    UnhideAllOp,
+    StateTransitionOp,
+    HideSelectedOp,
+    HideUnselectedOp,
+    unhideAllOps,
     RemoveInstancesOp,
     RestoreMissingInstancesOp,
     EntityTransformOp,

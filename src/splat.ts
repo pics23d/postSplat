@@ -41,7 +41,7 @@ class Splat extends Element {
     resource: EditorSplatResource;
     numSplats = 0;
     numDeleted = 0;
-    numLocked = 0;
+    numHidden = 0;
     numSelected = 0;
     entity: Entity;
     changedCounter = 0;
@@ -209,7 +209,7 @@ class Splat extends Element {
         // uploads dirty ranges; counts are maintained by the mutators.
         this.instances.flush();
         this.numSplats = this.instances.count;
-        this.numLocked = this.instances.numLocked;
+        this.numHidden = this.instances.numHidden;
         this.numSelected = this.instances.numSelected;
         this.numDeleted = this.instances.numRemoved;
 

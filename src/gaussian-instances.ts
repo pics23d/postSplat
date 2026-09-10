@@ -64,7 +64,7 @@ class GaussianInstances {
 
     // instance -> static row
     readonly sourceRow: Uint32Array;
-    // selected = 1, locked = 2 (a byte view over flagWords)
+    // selected = 1, hidden = 2 (a byte view over flagWords)
     readonly flags: Uint8Array;
     // transform palette index in the low 16 bits, colour palette index in the high
     readonly palette: Uint32Array;
@@ -76,7 +76,7 @@ class GaussianInstances {
 
     // counts, maintained incrementally by mutate()
     numSelected = 0;
-    numLocked = 0;
+    numHidden = 0;
     // instances removed and not (yet) restored, i.e. how much of the scene the
     // user has deleted
     numRemoved = 0;
@@ -372,9 +372,9 @@ class GaussianInstances {
         this.sourceSpan.add(lo, hi);
     }
 
-    // each instance contributes to at most one count, locked taking priority
+    // each instance contributes to at most one count, hidden taking priority
     private static bucket(s: number): number {
-        if (s & State.locked) return State.locked;
+        if (s & State.hidden) return State.hidden;
         if (s & State.selected) return State.selected;
         return 0;
     }
@@ -383,9 +383,9 @@ class GaussianInstances {
         const from = GaussianInstances.bucket(before);
         const to = GaussianInstances.bucket(after);
         if (from === to) return;
-        if (from === State.locked) this.numLocked--;
+        if (from === State.hidden) this.numHidden--;
         else if (from === State.selected) this.numSelected--;
-        if (to === State.locked) this.numLocked++;
+        if (to === State.hidden) this.numHidden++;
         else if (to === State.selected) this.numSelected++;
     }
 
@@ -394,17 +394,17 @@ class GaussianInstances {
     private recount() {
         const { flags, count } = this;
         let numSelected = 0;
-        let numLocked = 0;
+        let numHidden = 0;
         for (let i = 0; i < count; ++i) {
             const s = flags[i];
-            if (s & State.locked) {
-                numLocked++;
+            if (s & State.hidden) {
+                numHidden++;
             } else if (s & State.selected) {
                 numSelected++;
             }
         }
         this.numSelected = numSelected;
-        this.numLocked = numLocked;
+        this.numHidden = numHidden;
     }
 
     // upload the dirty spans of the gpu mirrors. cheap when nothing changed;

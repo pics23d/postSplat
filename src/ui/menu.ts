@@ -12,6 +12,7 @@ import selectDelete from './svg/delete.svg';
 import editRedo from './svg/edit-redo.svg';
 import editUndo from './svg/edit-undo.svg';
 import sceneExport from './svg/export.svg';
+import hiddenSvg from './svg/hidden.svg'; // [custom]
 import sceneImport from './svg/import.svg';
 import logoSvg from './svg/logo.svg';
 import sceneNew from './svg/new.svg';
@@ -21,10 +22,9 @@ import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
 import selectDuplicate from './svg/select-duplicate.svg';
 import selectInverse from './svg/select-inverse.svg';
-import selectLock from './svg/select-lock.svg';
 import selectNone from './svg/select-none.svg';
 import selectSeparate from './svg/select-separate.svg';
-import selectUnlock from './svg/select-unlock.svg';
+import shownSvg from './svg/shown.svg'; // [custom]
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -301,15 +301,28 @@ class Menu extends Container {
         }, {
             // separator
         }, {
-            text: () => i18n.t('menu.select.lock'),
-            icon: createSvg(selectLock),
+            // [custom] Hide Selected / Hide Unselected / Unhide All replace Lock /
+            // Unlock (user CR 2026-09-08); all three act on the active layer
+            text: () => i18n.t('menu.select.hide'),
+            icon: createSvg(hiddenSvg),
             extra: shortcutManager.formatShortcut('select.hide'),
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('select.hide')
         }, {
-            text: () => i18n.t('menu.select.unlock'),
-            icon: createSvg(selectUnlock),
+            text: () => i18n.t('menu.select.hide-unselected'),
+            icon: createSvg(hiddenSvg),
+            extra: shortcutManager.formatShortcut('select.hideUnselected'),
+            // something visible and unselected exists (with no selection this hides everything)
+            isEnabled: () => {
+                const splat = events.invoke('selection');
+                return !!splat && splat.numSplats - splat.numHidden - splat.numSelected > 0;
+            },
+            onSelect: () => events.fire('select.hideUnselected')
+        }, {
+            text: () => i18n.t('menu.select.unhide'),
+            icon: createSvg(shownSvg),
             extra: shortcutManager.formatShortcut('select.unhide'),
+            isEnabled: () => (events.invoke('selection')?.numHidden ?? 0) > 0,
             onSelect: () => events.fire('select.unhide')
         }, {
             text: () => i18n.t('menu.select.delete'),

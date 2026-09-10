@@ -365,7 +365,6 @@ class ProjectedSplatRenderer {
             new UniformFormat('colorRow0', UNIFORMTYPE_VEC4),
             new UniformFormat('colorRow1', UNIFORMTYPE_VEC4),
             new UniformFormat('colorRow2', UNIFORMTYPE_VEC4),
-            new UniformFormat('lockedColor', UNIFORMTYPE_VEC4),
             new UniformFormat('visible', UNIFORMTYPE_UINT),
             new UniformFormat('selectionEnabled', UNIFORMTYPE_UINT),
             new UniformFormat('pickOp', UNIFORMTYPE_INT),
@@ -628,7 +627,6 @@ class ProjectedSplatRenderer {
         const selectedSplat = events.invoke('selection') as Splat;
         const selectedColor = events.invoke('selectedClr');
         const unselectedColor = events.invoke('unselectedClr');
-        const lockedColor = events.invoke('lockedClr');
         const viewBands = events.invoke('view.bands') as number;
         // Size culling is visual only: selection and depth queries need every footprint.
         const minPixelSize = forPick ? 0 : (events.invoke('view.minPixelSize') as number) ?? 0;
@@ -719,7 +717,6 @@ class ProjectedSplatRenderer {
             compute.setParameter('colorRow0', this.previewRows.subarray(0, 4));
             compute.setParameter('colorRow1', this.previewRows.subarray(4, 8));
             compute.setParameter('colorRow2', this.previewRows.subarray(8, 12));
-            compute.setParameter('lockedColor', [lockedColor.r, lockedColor.g, lockedColor.b, lockedColor.a]);
             compute.setParameter('visible', splat.visible ? 1 : 0);
             compute.setParameter('selectionEnabled', selectionEnabled ? 1 : 0);
             compute.setParameter('pickOp', -1);

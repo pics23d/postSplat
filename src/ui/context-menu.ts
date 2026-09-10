@@ -6,13 +6,13 @@ import { ShortcutManager } from '../shortcut-manager';
 import { i18n } from './localization';
 import { MenuItem, MenuPanel } from './menu-panel';
 import selectDelete from './svg/delete.svg';
+import hiddenSvg from './svg/hidden.svg';
 import selectAll from './svg/select-all.svg';
 import selectDuplicate from './svg/select-duplicate.svg';
 import selectInverse from './svg/select-inverse.svg';
-import selectLock from './svg/select-lock.svg';
 import selectNone from './svg/select-none.svg';
 import selectSeparate from './svg/select-separate.svg';
-import selectUnlock from './svg/select-unlock.svg';
+import shownSvg from './svg/shown.svg';
 
 // [custom] Viewport context menu (user CR 2026-09-07): a right-click without a
 // drag opens a short, mode-dependent list at the cursor (the PointerController
@@ -93,17 +93,31 @@ class ContextMenu extends Container {
             extra: shortcut('select.invert'),
             onSelect: () => events.fire('select.invert')
         };
-        const lockItem: MenuItem = {
-            text: () => i18n.t('popup.shortcuts.lock-selected-splats'),
-            icon: createSvg(selectLock),
+        // Hide Selected / Hide Unselected / Unhide All (replace Lock / Unlock,
+        // user CR 2026-09-08); enable rules mirror the Select menu
+        const activeSplat = () => events.invoke('selection');
+        const hideSelectedItem: MenuItem = {
+            text: () => i18n.t('popup.shortcuts.hide-selected-splats'),
+            icon: createSvg(hiddenSvg),
             extra: shortcut('select.hide'),
             isEnabled: hasSelection,
             onSelect: () => events.fire('select.hide')
         };
-        const unlockItem: MenuItem = {
-            text: () => i18n.t('popup.shortcuts.unlock-all-splats'),
-            icon: createSvg(selectUnlock),
+        const hideUnselectedItem: MenuItem = {
+            text: () => i18n.t('popup.shortcuts.hide-unselected-splats'),
+            icon: createSvg(hiddenSvg),
+            extra: shortcut('select.hideUnselected'),
+            isEnabled: () => {
+                const splat = activeSplat();
+                return !!splat && splat.numSplats - splat.numHidden - splat.numSelected > 0;
+            },
+            onSelect: () => events.fire('select.hideUnselected')
+        };
+        const unhideAllItem: MenuItem = {
+            text: () => i18n.t('popup.shortcuts.unhide-all-splats'),
+            icon: createSvg(shownSvg),
             extra: shortcut('select.unhide'),
+            isEnabled: () => (activeSplat()?.numHidden ?? 0) > 0,
             onSelect: () => events.fire('select.unhide')
         };
         const deleteItem: MenuItem = {
@@ -142,12 +156,12 @@ class ContextMenu extends Container {
             separator,
             selectAllItem, selectNoneItem, invertItem,
             separator,
-            lockItem, unlockItem, deleteItem
+            hideSelectedItem, hideUnselectedItem, unhideAllItem, deleteItem
         ]);
 
         // a selection tool is active: the edits first, then the tool controls
         const selectionPanel = new MenuPanel([
-            deleteItem, lockItem, unlockItem,
+            deleteItem, hideSelectedItem, hideUnselectedItem, unhideAllItem,
             separator,
             duplicateItem, separateItem,
             separator,
@@ -156,10 +170,17 @@ class ContextMenu extends Container {
             focusPoint, deactivateTool
         ]);
 
+        // a Scene Manager row (user CR 2026-09-08): the hide ops for that layer,
+        // which the row's right-click has just made the edit target
+        const layerPanel = new MenuPanel([
+            hideSelectedItem, hideUnselectedItem, unhideAllItem
+        ]);
+
         this.append(navigationPanel);
         this.append(selectionPanel);
+        this.append(layerPanel);
 
-        const panels = [navigationPanel, selectionPanel];
+        const panels = [navigationPanel, selectionPanel, layerPanel];
         const isOpen = () => panels.some(panel => !panel.hidden);
         const hide = () => {
             panels.forEach((panel) => {
@@ -174,11 +195,10 @@ class ContextMenu extends Container {
         });
         events.on('camera.controlMode', () => hide());
 
-        const show = (request: OpenRequest) => {
+        const show = (panel: MenuPanel, request: OpenRequest) => {
             hide();
             point = { x: request.x, y: request.y };
 
-            const panel = activeTool !== null && SELECTION_TOOLS.has(activeTool) ? selectionPanel : navigationPanel;
             const parentRect = this.dom.getBoundingClientRect();
             let left = request.clientX - parentRect.left;
             let top = request.clientY - parentRect.top;
@@ -193,7 +213,13 @@ class ContextMenu extends Container {
             panel.dom.style.top = `${Math.max(EDGE_MARGIN, top)}px`;
         };
 
-        events.on('contextMenu.open', (request: OpenRequest) => show(request));
+        events.on('contextMenu.open', (request: OpenRequest) => {
+            show(activeTool !== null && SELECTION_TOOLS.has(activeTool) ? selectionPanel : navigationPanel, request);
+        });
+
+        events.on('contextMenu.openLayer', (request: { clientX: number, clientY: number }) => {
+            show(layerPanel, { ...request, x: 0.5, y: 0.5 });
+        });
 
         // any press outside the panel closes it (capture phase so the rows'
         // stopPropagation on pointerdown does not matter); a right-click

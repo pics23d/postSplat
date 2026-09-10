@@ -272,11 +272,9 @@ class AppearancePanel extends Container {
             value: [0, 0, 0, 1]
         });
 
-        const lockedClrPicker = new ColorPicker({
-            class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
-        });
+        // [custom] the "Locked Color" picker is gone: hidden splats (the former
+        // locked state) are culled, not tinted. The lockedClr preference stays
+        // dormant for a future frozen state
 
         const toArray = (clr: Color) => {
             return [clr.r, clr.g, clr.b, clr.a];
@@ -294,14 +292,9 @@ class AppearancePanel extends Container {
             unselectedClrPicker.value = toArray(clr);
         });
 
-        events.on('lockedClr', (clr: Color) => {
-            lockedClrPicker.value = toArray(clr);
-        });
-
         colorPickers.append(bgClrPicker);
         colorPickers.append(selectedClrPicker);
         colorPickers.append(unselectedClrPicker);
-        colorPickers.append(lockedClrPicker);
 
         colorsRow.append(colorsLabel);
         colorsRow.append(colorPickers);
@@ -456,14 +449,9 @@ class AppearancePanel extends Container {
             events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
         });
 
-        lockedClrPicker.on('change', (value: number[]) => {
-            events.fire('setLockedClr', new Color(value[0], value[1], value[2], value[3]));
-        });
-
         tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');
         tooltips.register(selectedClrPicker, () => i18n.t('panel.settings.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, () => i18n.t('panel.settings.unselected-color'), 'top');
-        tooltips.register(lockedClrPicker, () => i18n.t('panel.settings.locked-color'), 'top');
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
 
     }

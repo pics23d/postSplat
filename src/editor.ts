@@ -2,7 +2,7 @@ import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
 import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
 import { EditHistory } from './edit-history';
-import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
+import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectedOp, HideUnselectedOp, unhideAllOps, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
@@ -1267,20 +1267,33 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return editHistory.history[editHistory.cursor - 1] ?? null;
     });
 
+    // [custom] Hide (user CR 2026-09-08): the three ops act on the active layer
+    // only, like every other edit (upstream's unlock swept every layer)
     events.on('select.hide', () => {
         selectedSplats().forEach((splat) => {
-            events.fire('edit.add', new HideSelectionOp(splat));
+            const op = new HideSelectedOp(splat);
+            if (!op.ranges.empty) {
+                events.fire('edit.add', op);
+            }
+        });
+    });
+
+    events.on('select.hideUnselected', () => {
+        selectedSplats().forEach((splat) => {
+            const op = new HideUnselectedOp(splat);
+            if (!op.ranges.empty) {
+                events.fire('edit.add', op);
+            }
         });
     });
 
     events.on('select.unhide', () => {
-        const ops = (scene.getElementsByType(ElementType.splat) as Splat[])
-        .map(splat => new UnhideAllOp(splat))
-        .filter(op => !op.ranges.empty);
-
-        if (ops.length > 0) {
-            events.fire('edit.add', ops.length === 1 ? ops[0] : new MultiOp(ops));
-        }
+        selectedSplats().forEach((splat) => {
+            const ops = unhideAllOps(splat);
+            if (ops.length > 0) {
+                events.fire('edit.add', ops.length === 1 ? ops[0] : new MultiOp(ops));
+            }
+        });
     });
 
     events.on('select.delete', () => {

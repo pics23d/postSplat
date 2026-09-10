@@ -70,7 +70,7 @@ class StatusBar extends Container {
 
         const splatsValue = createStat('status-bar.splats');
         const selectedValue = createStat('status-bar.selected');
-        const lockedValue = createStat('status-bar.locked');
+        const hiddenValue = createStat('status-bar.hidden'); // [custom] was Locked
         const deletedValue = createStat('status-bar.deleted');
 
         this.append(timelineButton);
@@ -109,11 +109,15 @@ class StatusBar extends Container {
             if (!splat) return;
             splatsValue.text = i18n.formatInteger(splat.numSplats);
             selectedValue.text = i18n.formatInteger(splat.numSelected);
-            lockedValue.text = i18n.formatInteger(splat.numLocked);
+            hiddenValue.text = i18n.formatInteger(splat.numHidden);
             deletedValue.text = i18n.formatInteger(splat.numDeleted);
         };
 
         events.on('splat.stateChanged', (splat_: Splat) => {
+            // [custom] another layer's edit (import, undo) must not retarget the bar
+            if (splat && splat_ !== splat) {
+                return;
+            }
             splat = splat_;
             updateStats();
         });
@@ -133,7 +137,7 @@ class StatusBar extends Container {
                 const zero = i18n.formatInteger(0);
                 splatsValue.text = zero;
                 selectedValue.text = zero;
-                lockedValue.text = zero;
+                hiddenValue.text = zero;
                 deletedValue.text = zero;
             }
         });

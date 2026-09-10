@@ -208,6 +208,17 @@ class SplatList extends Container {
                 item.on('rename', (value: string) => {
                     events.fire('edit.add', new SplatRenameOp(splat, value));
                 });
+
+                // [custom] right-click (user CR 2026-09-08): the row's layer becomes
+                // the edit target and its hide / unhide menu opens at the cursor
+                item.dom.addEventListener('contextmenu', (event: MouseEvent) => {
+                    event.stopPropagation();
+                    if (!splat.visible) {
+                        return;
+                    }
+                    events.fire('selection', splat);
+                    events.fire('contextMenu.openLayer', { clientX: event.clientX, clientY: event.clientY });
+                });
             }
         });
 

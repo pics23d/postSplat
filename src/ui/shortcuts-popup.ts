@@ -47,9 +47,7 @@ const popupConfig: Record<string, CategoryConfig> = {
         shortcuts: [
             { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
             { id: 'view.toggleEditView', localeKey: 'popup.shortcuts.toggle-edit-view' },
-            { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' },
-            { id: 'select.hide', localeKey: 'popup.shortcuts.lock-selected-splats' },
-            { id: 'select.unhide', localeKey: 'popup.shortcuts.unlock-all-splats' }
+            { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' }
         ]
     },
     selection: {
@@ -59,6 +57,10 @@ const popupConfig: Record<string, CategoryConfig> = {
             { id: 'select.none', localeKey: 'popup.shortcuts.deselect-all' },
             { id: 'select.invert', localeKey: 'popup.shortcuts.invert-selection' },
             { id: 'select.delete', localeKey: 'popup.shortcuts.delete-selected-splats' },
+            // [custom] Hide (replaces Lock)
+            { id: 'select.hide', localeKey: 'popup.shortcuts.hide-selected-splats' },
+            { id: 'select.hideUnselected', localeKey: 'popup.shortcuts.hide-unselected-splats' },
+            { id: 'select.unhide', localeKey: 'popup.shortcuts.unhide-all-splats' },
             { id: 'selection.toggleUseDepth', localeKey: 'popup.shortcuts.toggle-depth' },
             { id: 'selection.toggleFootprint', localeKey: 'popup.shortcuts.toggle-footprint' }
         ],

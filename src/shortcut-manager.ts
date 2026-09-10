@@ -16,8 +16,6 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     // Show
     'grid.toggleVisible': { keys: ['g'] },
     'camera.toggleShowInfo': { keys: ['i'] },
-    'select.hide': { keys: ['h'] },
-    'select.unhide': { keys: ['h'], shift: 'required' },
 
     // Playback
     'timeline.togglePlay': { keys: [' '] },
@@ -33,6 +31,10 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'select.none': { keys: ['a'], ctrl: 'required', shift: 'required', capture: true },
     'select.invert': { keys: ['i'], ctrl: 'required' },
     'select.delete': { keys: ['Delete', 'Backspace'] },
+    // [custom] Hide (replaces Lock, user CR 2026-09-08): H / Alt+H / Shift+H
+    'select.hide': { keys: ['h'] },
+    'select.hideUnselected': { keys: ['h'], alt: 'required' },
+    'select.unhide': { keys: ['h'], shift: 'required' },
     'selection.toggleUseDepth': { keys: ['n'] },
     'selection.toggleFootprint': { keys: ['m'] },
     'view.toggleEditView': { keys: ['Tab'] },

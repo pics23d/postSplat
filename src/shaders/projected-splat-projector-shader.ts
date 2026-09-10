@@ -102,7 +102,7 @@ struct ProjectorUniforms {
     cameraPosition: vec3f,
     // the colour panel's uncommitted grade, previewed on the edit target only:
     // 0 = off, 1 = selected instances, 2 = every instance (an empty selection
-    // means the whole layer). Locked instances are never a target, matching
+    // means the whole layer). Hidden instances left the frame above, matching
     // SplatsColorOp.forEachTarget.
     previewMode: u32,
     colorAlpha: f32,
@@ -110,7 +110,6 @@ struct ProjectorUniforms {
     colorRow0: vec4f,
     colorRow1: vec4f,
     colorRow2: vec4f,
-    lockedColor: vec4f,
     visible: u32,
     selectionEnabled: u32,
     pickOp: i32,
@@ -194,9 +193,13 @@ fn main(
     let sourceIndex = instanceSource[instance];
     let uv = sourceCoord(sourceIndex);
     let state = instanceFlagByte(instance) & 3u;
+    // [custom] hidden instances leave the frame here: no cache entry, so they
+    // are never sorted, drawn, ringed, footprint-tested or picked
+    if ((state & 2u) != 0u) {
+        return;
+    }
     if ((uniforms.pickOp == 0 && state != 0u)
-        || (uniforms.pickOp == 1 && state != 1u)
-        || (uniforms.pickOp == 2 && (state & 2u) != 0u)) {
+        || (uniforms.pickOp == 1 && state != 1u)) {
         return;
     }
 
@@ -318,18 +321,13 @@ fn main(
     let grade = paletteGrade(paletteWord >> 16u);
     var graded = applyColorGrade(color.rgb, grade.row0, grade.row1, grade.row2);
     var gradedAlpha = color.a * grade.alpha;
-    if ((state & 2u) == 0u &&
-        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u))) {
+    if (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u)) {
         graded = applyColorGrade(graded, uniforms.colorRow0, uniforms.colorRow1, uniforms.colorRow2);
         gradedAlpha *= uniforms.colorAlpha;
     }
     color = vec4f(graded, clamp(gradedAlpha, 0.0, 1.0));
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
-    let locked = (state & 2u) != 0u;
-    if (locked) {
-        color *= uniforms.lockedColor;
-    }
     // the cache colour stays untinted: the render shader's vertex stage applies
     // the gaussian selection blends, so the ring path can blend from the
     // splat's own colour independently of them
@@ -367,7 +365,8 @@ fn main(
         pack2x16float(vec2f(len2, 0.0))
             | (u32(clamp(color.a, 0.0, 1.0) * 255.0 + 0.5) << 16u)
             | select(0u, 0x01000000u, selected)
-            | select(0u, 0x02000000u, locked)
+            // bit 25 (was "locked") is no longer written: hidden instances never reach
+            // the cache; the render shader keeps its gates for a future frozen state
             | select(0u, 0x04000000u, uniforms.depthFar > 0.0 && depth > uniforms.depthFar)
     ));
     // survivor: claim a slot in the compact list. Only surviving threads contend,
