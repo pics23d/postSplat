@@ -1,5 +1,5 @@
 import {
-    BLEND_NONE,
+    BLEND_NORMAL,
     FUNC_LESS,
     PRIMITIVE_TRIANGLES,
     SEMANTIC_POSITION,
@@ -43,7 +43,7 @@ class SplatCenters extends Element {
         // first - which reads as patches of differing density across a large
         // scene. FUNC_LESS matters: the LESSEQUAL default admits every coincident
         // fragment, putting the overdraw cost straight back
-        this.material.blendType = BLEND_NONE;
+        this.material.blendType = BLEND_NORMAL; // [custom] the Appearance sliders are the centers' opacity
         this.material.depthWrite = true;
         this.material.depthTest = true;
         this.material.depthFunc = FUNC_LESS;

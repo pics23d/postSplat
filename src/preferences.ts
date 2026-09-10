@@ -116,12 +116,12 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         { key: 'view.rings', setCommand: 'view.setRings', getDefault: () => (events.invoke('selection.footprint') as number) > 0, validate: isBool, group: 'appearance' },
         { key: 'view.ringSize', setCommand: 'view.setRingSize', getDefault: () => 4, validate: isNumber(1, 50), group: 'appearance' },
         { key: 'view.splatsColorBlend', setCommand: 'view.setSplatsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.splatsSelectionBlend', setCommand: 'view.setSplatsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
+        { key: 'view.splatsSelectionBlend', setCommand: 'view.setSplatsSelectionBlend', getDefault: () => 0.75, validate: isNumber(0, 1), group: 'appearance' }, // [custom] default 0.75
         { key: 'view.centersColorBlend', setCommand: 'view.setCentersColorBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
         { key: 'view.centersSelectionBlend', setCommand: 'view.setCentersSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.ringsColorBlend', setCommand: 'view.setRingsColorBlend', getDefault: () => 0, validate: isNumber(0, 1), group: 'appearance' },
+        { key: 'view.ringsColorBlend', setCommand: 'view.setRingsColorBlend', getDefault: () => 0.6, validate: isNumber(0, 1), group: 'appearance' }, // [custom] ring opacity
         { key: 'view.ringsSelectionBlend', setCommand: 'view.setRingsSelectionBlend', getDefault: () => 1, validate: isNumber(0, 1), group: 'appearance' },
-        { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => false, validate: isBool, group: 'appearance' },
+        { key: 'view.selectionColor', setCommand: 'view.setSelectionColor', getDefault: () => true, validate: isBool, group: 'appearance' }, // [custom] on by default
         { key: 'view.selectionCenters', setCommand: 'view.setSelectionCenters', getDefault: () => (events.invoke('selection.footprint') as number) === 0, validate: isBool, group: 'appearance' },
         { key: 'view.selectionRings', setCommand: 'view.setSelectionRings', getDefault: () => (events.invoke('selection.footprint') as number) > 0, validate: isBool, group: 'appearance' },
         // the inactive footprint mode's view profile: 0/1 flags in

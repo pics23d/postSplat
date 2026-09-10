@@ -812,19 +812,26 @@ class ProjectedSplatRenderer {
             unselectedColor.b,
             events.invoke('view.splatsColorBlend')
         ] : [0, 0, 0, 0]);
-        // the ring blends start from the splat's own colour too, so they stay
-        // independent of the gaussian tints
+        // [custom] ring bands: flat colours, the alphas are the Appearance
+        // opacity sliders; with the selection rings off a selected splat's
+        // band looks like an unselected one
+        const ringOpacity = events.invoke('view.ringsColorBlend');
         this.material.setParameter('ringColor', [
             unselectedColor.r,
             unselectedColor.g,
             unselectedColor.b,
-            events.invoke('view.ringsColorBlend')
+            ringOpacity
         ]);
-        this.material.setParameter('selectedRingColor', [
+        this.material.setParameter('selectedRingColor', events.invoke('view.selectionRings') ? [
             selectedColor.r,
             selectedColor.g,
             selectedColor.b,
-            events.invoke('view.selectionRings') ? events.invoke('view.ringsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1) : 0
+            events.invoke('view.ringsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
+        ] : [
+            unselectedColor.r,
+            unselectedColor.g,
+            unselectedColor.b,
+            ringOpacity
         ]);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);

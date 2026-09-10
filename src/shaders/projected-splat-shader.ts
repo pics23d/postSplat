@@ -147,10 +147,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     if (outside) {
         gaussianRgb *= uniform.depthFade;
     }
-    // ring band colours, resolved here from the untinted base: gaussian colour
-    // -> flat unselected colour -> selection colour
-    let ringRgb = mix(color, uniform.ringColor.rgb, uniform.ringColor.a);
-    let selectedRingRgb = mix(ringRgb, uniform.selectedRingColor.rgb, uniform.selectedRingColor.a);
+    // [custom] ring bands are the flat unselected / selection colour and the
+    // Appearance sliders are their opacity (user CR 2026-09-10; upstream mixed
+    // the colours from the splat's own colour and drew every band at 0.6)
+    let ringRgb = uniform.ringColor.rgb;
+    let selectedRingRgb = uniform.selectedRingColor.rgb;
 
     var axis1 = unpack2x16float(a.w);
     var axis2 = unpack2x16float(b).x * normalize(vec2f(axis1.y, -axis1.x));
@@ -168,8 +169,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
     output.gaussianUV = corner;
     output.gaussianColor = vec4f(prepareOutputFromGamma(gaussianRgb, clip.w), alpha);
-    output.ringColor = vec4f(prepareOutputFromGamma(ringRgb, clip.w), 1.0);
-    output.selectedRingColor = vec4f(prepareOutputFromGamma(selectedRingRgb, clip.w), 1.0);
+    output.ringColor = vec4f(prepareOutputFromGamma(ringRgb, clip.w), uniform.ringColor.a);
+    output.selectedRingColor = vec4f(prepareOutputFromGamma(selectedRingRgb, clip.w), uniform.selectedRingColor.a);
     // bit 2 carries the far-plane flag to the fragment (rings suppression)
     output.gaussianFlags = flags | select(0u, 4u, outside);
     output.gaussianId = entry - uniform.pickBase;
@@ -256,10 +257,9 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         if (!locked && !outside && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
-                alpha = 0.6;
-                // ring colours arrive fully resolved from the vertex stage,
-                // blended from the splat's own colour so they stay independent
-                // of the gaussian tints
+                // [custom] the band's opacity is the Appearance slider (unselected /
+                // selection), carried in the ring colours' alpha
+                alpha = select(ringColor.a, selectedRingColor.a, selected);
                 color = select(ringColor.rgb, selectedRingColor.rgb, selected);
             } else {
                 // rings mode shades the whole gaussian: the interior keeps its

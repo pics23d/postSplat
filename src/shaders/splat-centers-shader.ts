@@ -135,20 +135,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // gaussian renderer does, so a center straddling the near plane still draws
     output.position = vec4f(projected.xy + offset, clamp(projected.z, 0.0, projected.w), projected.w);
 
-    // colorBlend mixes the base from the gaussian's own colour toward the flat
-    // unselected colour; at 1 the (expensive) texture and SH reads are skipped
-    var gaussianColor = uniform.unselectedClr.rgb;
-    if (uniform.colorBlend < 1.0) {
-        var texColor = textureLoad(splatColor, uv, 0).rgb;
-        #if SH_BANDS > 0
-            let worldDirection = normalize(worldPosition.xyz - uniform.view_position);
-            let modelDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
-            texColor += evaluateSH(uv, modelDirection);
-        #endif
-        gaussianColor = mix(texColor, uniform.unselectedClr.rgb, uniform.colorBlend);
+    // [custom] a center is the flat unselected / selection colour and the
+    // Appearance sliders are its opacity (user CR 2026-09-10; upstream mixed
+    // the colours from the gaussian's own colour, which gave odd in-between
+    // hues). A fully transparent center leaves the frame
+    let selected = state == 1u && uniform.selectionCenters != 0u;
+    let opacity = select(uniform.colorBlend, uniform.selectionBlend, selected);
+    if (opacity <= 0.0) {
+        output.position = vec4f(0.0, 0.0, 2.0, 1.0);
+        return output;
     }
-    let selected = select(0.0, uniform.selectionBlend, state == 1u && uniform.selectionCenters != 0u);
-    output.overlayColor = vec4f(mix(gaussianColor, uniform.selectedClr.rgb, selected), 1.0);
+    output.overlayColor = vec4f(select(uniform.unselectedClr.rgb, uniform.selectedClr.rgb, selected), opacity);
     return output;
 }
 `;

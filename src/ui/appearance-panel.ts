@@ -260,16 +260,19 @@ class AppearancePanel extends Container {
             value: [0, 0, 0]
         });
 
+        // [custom] rgb only (user report 2026-09-10): the renderer never read
+        // these pickers' alpha, the tint weight is the Selection / Unselected
+        // Tint slider, so an alpha channel here was a dead control
         const selectedClrPicker = new ColorPicker({
             class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
+            channels: 3,
+            value: [0, 0, 0]
         });
 
         const unselectedClrPicker = new ColorPicker({
             class: 'settings-panel-row-picker',
-            channels: 4,
-            value: [0, 0, 0, 1]
+            channels: 3,
+            value: [0, 0, 0]
         });
 
         // [custom] the "Locked Color" picker is gone: hidden splats (the former
@@ -285,11 +288,11 @@ class AppearancePanel extends Container {
         });
 
         events.on('selectedClr', (clr: Color) => {
-            selectedClrPicker.value = toArray(clr);
+            selectedClrPicker.value = toArray(clr).slice(0, 3);
         });
 
         events.on('unselectedClr', (clr: Color) => {
-            unselectedClrPicker.value = toArray(clr);
+            unselectedClrPicker.value = toArray(clr).slice(0, 3);
         });
 
         colorPickers.append(bgClrPicker);
@@ -442,11 +445,11 @@ class AppearancePanel extends Container {
         });
 
         selectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], value[3]));
+            events.fire('setSelectedClr', new Color(value[0], value[1], value[2], 1));
         });
 
         unselectedClrPicker.on('change', (value: number[]) => {
-            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], value[3]));
+            events.fire('setUnselectedClr', new Color(value[0], value[1], value[2], 1));
         });
 
         tooltips.register(bgClrPicker, () => i18n.t('panel.settings.background-color'), 'left');

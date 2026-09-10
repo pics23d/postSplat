@@ -1411,16 +1411,18 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // per-surface colour blend weights. colorBlend mixes the base colour from
-    // the gaussian's own colour (0) toward the flat unselected colour (1);
-    // selectionBlend mixes a selected splat from that base toward the
-    // selection colour
+    // per-surface weights, shown as "opacity" in the Appearance panel. Gaussians:
+    // colorBlend mixes the base colour from the gaussian's own colour (0) toward
+    // the flat unselected colour (1), selectionBlend mixes a selected splat from
+    // that base toward the selection colour ([custom] default 0.75, user
+    // decision 2026-09-10). Centers and rings ([custom]): the flat unselected /
+    // selection colour at that opacity (rings: 0.6 was upstream's fixed band alpha)
     const blends: [name: string, value: number][] = [
         ['splatsColorBlend', 0],
-        ['splatsSelectionBlend', 1],
+        ['splatsSelectionBlend', 0.75],
         ['centersColorBlend', 1],
         ['centersSelectionBlend', 1],
-        ['ringsColorBlend', 0],
+        ['ringsColorBlend', 0.6],
         ['ringsSelectionBlend', 1]
     ];
     blends.forEach(([name, initial]) => {
@@ -1584,7 +1586,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // selection display
 
-    let selectionColor = false;
+    let selectionColor = true; // [custom] on by default (user decision 2026-09-10; upstream false)
     let selectionCenters = true;
     let selectionRings = false;
 
