@@ -1,6 +1,7 @@
 import { Button, Container, Element, Label, VectorInput } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
+import { ShapePreview } from './shape-preview'; // [custom]
 import { ShapeGizmoMode, ShapeTransformGizmo } from './shape-transform-gizmo';
 import { BoxShape } from '../box-shape';
 import { ShapeTransformOp } from '../edit-ops';
@@ -305,6 +306,9 @@ class BoxSelection {
             return { position: bound.center.clone(), radius: bound.halfExtents.length() };
         };
 
+        // [custom] live preview of the splats the box would select
+        const preview = new ShapePreview(events, 'box', () => this.active, () => box.pivot.getWorldTransform());
+
         this.activate = () => {
             this.active = true;
             scene.add(box);
@@ -321,6 +325,7 @@ class BoxSelection {
             gizmo.detach();
             scene.remove(box);
             this.active = false;
+            preview.clear(); // [custom]
 
             // the volume is transient tool state: drop its ops from history so
             // undo/redo never hits steps that visibly change nothing while the

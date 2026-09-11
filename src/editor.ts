@@ -582,6 +582,60 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
+    // [custom] shape-tool preview (user CR 2026-09-11): the sphere / box tools
+    // ask for the mask of the splats their volume would select and the
+    // renderer tints them; the same intersect the Apply buttons run, coalesced
+    // so a gizmo drag never queues more than one GPU pass ahead
+    let previewGeneration = 0;
+    let previewRunning = false;
+    let previewPending: (() => Promise<void>) | null = null;
+    const runPreview = async (job: () => Promise<void>) => {
+        if (previewRunning) {
+            previewPending = job;
+            return;
+        }
+        previewRunning = true;
+        try {
+            await job();
+            while (previewPending) {
+                const next = previewPending;
+                previewPending = null;
+                await next();
+            }
+        } finally {
+            previewRunning = false;
+        }
+    };
+
+    events.on('select.previewShape', (kind: 'sphere' | 'box', transform: Mat4) => {
+        const splat = selectedSplats()[0];
+        if (!splat) {
+            scene.projectedSplatRenderer.setPreview(null, null);
+            return;
+        }
+        const footprint = events.invoke('selection.footprint') as number;
+        const depthFar = depthFarSnapshot();
+        const options = kind === 'sphere' ?
+            { sphere: { transform, footprint }, depthFar } :
+            { box: { transform, footprint }, depthFar };
+        const generation = ++previewGeneration;
+        runPreview(async () => {
+            const mask = await scene.commandQueue.enqueue(() => scene.dataProcessor.intersect(options, splat));
+            if (generation === previewGeneration) {
+                scene.projectedSplatRenderer.setPreview(splat, mask);
+                scene.forceRender = true;
+            }
+            scene.dataProcessor.releaseMask(mask);
+        });
+    });
+
+    events.on('select.previewClear', () => {
+        previewGeneration++;
+        previewPending = null;
+        scene.projectedSplatRenderer.setPreview(null, null);
+        scene.forceRender = true;
+    });
+
     // transform maps the unit cube (side 1) to world space
     events.on('select.byBox', async (op: 'add'|'remove'|'set'|'intersect', transform: Mat4) => {
         const depthFar = depthFarSnapshot();

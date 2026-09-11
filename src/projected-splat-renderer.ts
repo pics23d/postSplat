@@ -54,6 +54,45 @@ import type { Splat } from './splat';
 
 const INSTANCE_SIZE = 128;
 const WORKGROUP_SIZE = 256;
+
+// [custom] the shape-tool preview colour (user CR 2026-09-11): the complement
+// of the selection colour, so it follows whatever the user picks and always
+// reads as "would be selected" next to "is selected"; a grey selection colour
+// has no useful complement and a complement too close to the unselected colour
+// would blend in, so both fall back to orange. Half the selection opacity
+type RgbLike = { r: number, g: number, b: number };
+const rgbToHsv = (c: RgbLike): [number, number, number] => {
+    const max = Math.max(c.r, c.g, c.b);
+    const min = Math.min(c.r, c.g, c.b);
+    const d = max - min;
+    let h = 0;
+    if (d > 1e-6) {
+        if (max === c.r) h = ((c.g - c.b) / d) % 6;
+        else if (max === c.g) h = (c.b - c.r) / d + 2;
+        else h = (c.r - c.g) / d + 4;
+        h = (h * 60 + 360) % 360;
+    }
+    return [h, max > 1e-6 ? d / max : 0, max];
+};
+const hsvToRgb = (h: number, s: number, v: number): [number, number, number] => {
+    const f = (n: number) => {
+        const k = (n + h / 60) % 6;
+        return v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+    };
+    return [f(5), f(3), f(1)];
+};
+const previewTint = (selected: RgbLike, unselected: RgbLike, selectionOpacity: number): number[] => {
+    const weight = Math.max(0.15, selectionOpacity * 0.5);
+    const [h, s] = rgbToHsv(selected);
+    const [uh, us] = rgbToHsv(unselected);
+    const complement = (h + 180) % 360;
+    const hueDistance = Math.min(Math.abs(complement - uh), 360 - Math.abs(complement - uh));
+    if (s < 0.3 || (us > 0.3 && hueDistance < 30)) {
+        return [1, 0.5, 0, weight];
+    }
+    const [r, g, b] = hsvToRgb(complement, Math.max(s, 0.8), 1);
+    return [r, g, b, weight];
+};
 const ENTRY_ALIGNMENT = 256;
 
 // significant bits in a sort key: sortKeys stores (~depth) >> 12, so the top 12
@@ -149,6 +188,11 @@ class ProjectedSplatRenderer {
     // single u32 the projector atomically appends into, consumed by the indirect
     // draw args, the sort's element count and the vertex shader's bounds check
     private splatCounter: StorageBuffer | null = null;
+    // [custom] shape-tool preview: the mask of the splats a sphere / box would
+    // select, and the layer + instance count it was computed for
+    private emptyPreviewMask: StorageBuffer;
+    private previewMask: StorageBuffer | null = null;
+    private preview: { splat: Splat, count: number } | null = null;
     private argsCompute: Compute | null = null;
     private argsShader: Shader | null = null;
     private argsBindGroupFormat: BindGroupFormat | null = null;
@@ -178,6 +222,8 @@ class ProjectedSplatRenderer {
         // renderer issues is an indirect dispatch
         this.sorter = new ComputeRadixSort(this.device, { indirect: true } as any);
         this.splatCounter = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
+        // [custom] bound as the preview mask whenever a placement has no preview
+        this.emptyPreviewMask = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_DST);
 
         this.material = new ShaderMaterial({
             uniqueName: 'ProjectedSplatMaterial',
@@ -371,7 +417,8 @@ class ProjectedSplatRenderer {
             new UniformFormat('minPixelSize', UNIFORMTYPE_FLOAT),
             new UniformFormat('near', UNIFORMTYPE_FLOAT),
             new UniformFormat('far', UNIFORMTYPE_FLOAT),
-            new UniformFormat('depthFar', UNIFORMTYPE_FLOAT) // [custom]
+            new UniformFormat('depthFar', UNIFORMTYPE_FLOAT), // [custom]
+            new UniformFormat('previewColor', UNIFORMTYPE_VEC4) // [custom] shape-tool preview
         ]);
         const bindGroupFormat = new BindGroupFormat(this.device, [
             new BindStorageBufferFormat('sortKeys', SHADERSTAGE_COMPUTE),
@@ -382,6 +429,7 @@ class ProjectedSplatRenderer {
             new BindStorageBufferFormat('instanceSource', SHADERSTAGE_COMPUTE, true),
             new BindStorageBufferFormat('instanceFlags', SHADERSTAGE_COMPUTE, true),
             new BindStorageBufferFormat('instancePalette', SHADERSTAGE_COMPUTE, true),
+            new BindStorageBufferFormat('previewMask', SHADERSTAGE_COMPUTE, true), // [custom]
             ...textureFormats,
             new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
         ]);
@@ -683,6 +731,13 @@ class ProjectedSplatRenderer {
             compute.setParameter('instanceSource', instances.instanceSource);
             compute.setParameter('instanceFlags', instances.instanceFlags);
             compute.setParameter('instancePalette', instances.instancePalette);
+            // [custom] shape-tool preview: only the layer it was computed for, and
+            // only while the instance list still has the size the mask was made for
+            const previewActive = !clean && selectionEnabled && !!this.preview &&
+                this.preview.splat === splat && this.preview.count === instances.count;
+            compute.setParameter('previewMask', previewActive ? this.previewMask : this.emptyPreviewMask);
+            compute.setParameter('previewColor', previewActive ?
+                previewTint(selectedColor, unselectedColor, events.invoke('view.splatsSelectionBlend') as number) : [0, 0, 0, 0]);
             compute.setParameter('transformA', resource.getTexture('transformA'));
             compute.setParameter('transformB', resource.getTexture('transformB'));
             compute.setParameter('splatColor', resource.getTexture('splatColor'));
@@ -872,7 +927,25 @@ class ProjectedSplatRenderer {
         };
     }
 
+    // [custom] shape-tool preview (sphere / box): a per-instance byte mask of
+    // the splats the volume would select, tinted by the projector. null clears
+    setPreview(splat: Splat | null, mask: Uint8Array | null) {
+        if (!splat || !mask) {
+            this.preview = null;
+            return;
+        }
+        const byteSize = maskByteSize(splat.instances.count);
+        if (!this.previewMask || this.previewMask.byteSize !== byteSize) {
+            this.previewMask?.destroy();
+            this.previewMask = new StorageBuffer(this.device, byteSize, BUFFERUSAGE_COPY_DST);
+        }
+        this.previewMask.write(0, mask, 0, byteSize);
+        this.preview = { splat, count: splat.instances.count };
+    }
+
     destroy() {
+        this.previewMask?.destroy();
+        this.emptyPreviewMask.destroy();
         for (const placement of this.placements) {
             placement.compute?.destroy();
         }

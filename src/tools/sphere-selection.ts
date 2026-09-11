@@ -1,6 +1,7 @@
 import { Button, Container, Element, Label, NumericInput, VectorInput } from '@playcanvas/pcui';
 import { Vec3 } from 'playcanvas';
 
+import { ShapePreview } from './shape-preview'; // [custom]
 import { ShapeGizmoMode, ShapeTransformGizmo } from './shape-transform-gizmo';
 import { ShapeTransformOp } from '../edit-ops';
 import { Events } from '../events';
@@ -253,6 +254,9 @@ class SphereSelection {
             return { position: bound.center.clone(), radius: bound.halfExtents.length() };
         };
 
+        // [custom] live preview of the splats the sphere would select
+        const preview = new ShapePreview(events, 'sphere', () => this.active, () => sphere.pivot.getWorldTransform());
+
         this.activate = () => {
             this.active = true;
             scene.add(sphere);
@@ -269,6 +273,7 @@ class SphereSelection {
             gizmo.detach();
             scene.remove(sphere);
             this.active = false;
+            preview.clear(); // [custom]
 
             // the volume is transient tool state: drop its ops from history so
             // undo/redo never hits steps that visibly change nothing while the

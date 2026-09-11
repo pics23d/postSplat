@@ -120,7 +120,10 @@ struct ProjectorUniforms {
     // [custom] depth selection far plane in view depth; 0 = off. Splats beyond
     // it are flagged (cacheB bit 26) so the render shader fades them and the
     // selection passes skip them
-    depthFar: f32
+    depthFar: f32,
+    // [custom] shape-tool preview (sphere / box, user CR 2026-09-11): rgb +
+    // weight of the tint for instances flagged in previewMask; weight 0 = off
+    previewColor: vec4f
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
@@ -136,15 +139,17 @@ struct ProjectorUniforms {
 @group(0) @binding(5) var<storage, read> instanceSource: array<u32>;
 @group(0) @binding(6) var<storage, read> instanceFlags: array<u32>;
 @group(0) @binding(7) var<storage, read> instancePalette: array<u32>;
-@group(0) @binding(8) var transformA: texture_2d<u32>;
-@group(0) @binding(9) var transformB: texture_2d<f32>;
-@group(0) @binding(10) var splatColor: texture_2d<f32>;
-@group(0) @binding(11) var transformPalette: texture_2d<f32>;
-@group(0) @binding(12) var colorPalette: texture_2d<f32>;
-${bands > 0 ? '@group(0) @binding(13) var splatSH_1to3: texture_2d<u32>;' : ''}
-${bands > 1 ? '@group(0) @binding(14) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(15) var splatSH_8to11: texture_2d<u32>;' : ''}
-${bands > 2 ? '@group(0) @binding(16) var splatSH_12to15: texture_2d<u32>;' : ''}
-@group(0) @binding(${13 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
+// [custom] shape-tool preview mask, one byte per instance packed like instanceFlags
+@group(0) @binding(8) var<storage, read> previewMask: array<u32>;
+@group(0) @binding(9) var transformA: texture_2d<u32>;
+@group(0) @binding(10) var transformB: texture_2d<f32>;
+@group(0) @binding(11) var splatColor: texture_2d<f32>;
+@group(0) @binding(12) var transformPalette: texture_2d<f32>;
+@group(0) @binding(13) var colorPalette: texture_2d<f32>;
+${bands > 0 ? '@group(0) @binding(14) var splatSH_1to3: texture_2d<u32>;' : ''}
+${bands > 1 ? '@group(0) @binding(15) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(16) var splatSH_8to11: texture_2d<u32>;' : ''}
+${bands > 2 ? '@group(0) @binding(17) var splatSH_12to15: texture_2d<u32>;' : ''}
+@group(0) @binding(${14 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
 
 ${shCode(bands)}
 ${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
@@ -169,6 +174,11 @@ fn rotationMatrix(qIn: vec4f) -> mat3x3f {
 // per-instance editor state, packed 4 bytes to a word
 fn instanceFlagByte(instance: u32) -> u32 {
     return (instanceFlags[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
+}
+
+// [custom] the shape-tool preview mask byte (255 = the volume would select it)
+fn previewMaskByte(instance: u32) -> u32 {
+    return (previewMask[instance >> 2u] >> ((instance & 3u) * 8u)) & 0xffu;
 }
 
 @compute @workgroup_size(256)
@@ -326,6 +336,13 @@ fn main(
         gradedAlpha *= uniforms.colorAlpha;
     }
     color = vec4f(graded, clamp(gradedAlpha, 0.0, 1.0));
+
+    // [custom] shape-tool preview: the splats the sphere / box would select
+    // take the preview colour here; the render shader's selection tint still
+    // applies on top for those already selected
+    if (uniforms.previewColor.a > 0.0 && previewMaskByte(instance) != 0u) {
+        color = vec4f(mix(color.rgb, uniforms.previewColor.rgb, uniforms.previewColor.a), color.a);
+    }
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     // the cache colour stays untinted: the render shader's vertex stage applies
