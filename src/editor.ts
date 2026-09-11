@@ -2,12 +2,13 @@ import { Color, Mat4, Quat, Texture, Vec3 } from 'playcanvas';
 
 import { createGradeTerms, gradeTerms, type GradeParams } from './color-grade';
 import { EditHistory } from './edit-history';
-import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectedOp, HideUnselectedOp, unhideAllOps, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
+import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectedOp, HideUnselectedOp, unhideAllOps, RemoveInstancesOp, RestoreMissingInstancesOp, MultiOp, AddSplatOp, RemoveSplatOp, SetLocalFrameOp, SplatsColorOp } from './edit-ops';
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
 import { Scene } from './scene';
 import { Splat } from './splat';
+import { mergeSplats } from './splat-merge'; // [custom]
 import { oklabDistance, quantizeColors, rgbToOklab } from './tools/color-quantize'; // [custom]
 
 // register for editor and scene events
@@ -1399,6 +1400,38 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('edit.separate', () => {
         performSelectionFunc('separate');
+    });
+
+    // [custom] merge the Scene Manager's marked layers into one new layer
+    // (user CR 2026-09-11): the sources leave the scene (undoable), the merged
+    // layer is named after the first one and becomes the edit target
+    events.on('edit.merge', async () => {
+        const splats = ((events.invoke('scene.markedSplats') as Splat[]) ?? []).filter(s => s.scene === scene);
+        if (splats.length < 2) {
+            return;
+        }
+        events.fire('startSpinner');
+        try {
+            const name = `${splats[0].name.replace(/\.[^.]+$/, '')}+${splats.length - 1}`;
+            const merged = await mergeSplats(scene, splats, name);
+            if (!merged) {
+                return;
+            }
+            await editHistory.add(new MultiOp([
+                ...splats.map(s => new RemoveSplatOp(scene, s)),
+                new AddSplatOp(scene, merged)
+            ]));
+            events.fire('selection', merged);
+        } catch (err) {
+            console.error(err);
+            await events.invoke('showPopup', {
+                type: 'error',
+                header: 'Merge Splats',
+                message: `${err}`
+            });
+        } finally {
+            events.fire('stopSpinner');
+        }
     });
 
     // bake the panel's pending grade into the selected gaussians. `params` are the

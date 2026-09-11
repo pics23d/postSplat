@@ -637,6 +637,36 @@ class AddSplatOp {
     }
 }
 
+// [custom] the inverse of AddSplatOp, for the layer merge (user CR 2026-09-11):
+// the layer leaves the scene but stays alive so undo can put it back
+class RemoveSplatOp {
+    name = 'removeSplat';
+    scene: Scene;
+    splat: Splat;
+
+    constructor(scene: Scene, splat: Splat) {
+        this.scene = scene;
+        this.splat = splat;
+    }
+
+    do() {
+        this.scene.remove(this.splat);
+    }
+
+    async undo() {
+        await this.scene.add(this.splat);
+    }
+
+    destroy() {
+        // dropped from history: the layer is only ours to destroy while the op
+        // is in effect (the layer is out of the scene). After an undo it is the
+        // scene's again and stays.
+        if (!this.splat.scene) {
+            this.splat.destroy();
+        }
+    }
+}
+
 class SplatRenameOp {
     name = 'splatRename';
     splat: Splat;
@@ -681,5 +711,6 @@ export {
     AnimTrackEditOp,
     MultiOp,
     AddSplatOp,
+    RemoveSplatOp,
     SplatRenameOp
 };

@@ -17,6 +17,11 @@
             background-color: $bcg-darker;
         }
 
+        // [custom] marked for the layer merge (Ctrl / Shift + click)
+        &.marked {
+            box-shadow: inset 3px 0 0 $clr-hilight;
+        }
+
         #splat-edit {
             margin: 0;
             flex-grow: 1;

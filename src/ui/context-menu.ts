@@ -7,6 +7,7 @@ import { i18n } from './localization';
 import { MenuItem, MenuPanel } from './menu-panel';
 import selectDelete from './svg/delete.svg';
 import hiddenSvg from './svg/hidden.svg';
+import mergeSvg from './svg/merge.svg';
 import selectAll from './svg/select-all.svg';
 import selectDuplicate from './svg/select-duplicate.svg';
 import selectInverse from './svg/select-inverse.svg';
@@ -139,6 +140,13 @@ class ContextMenu extends Container {
             isEnabled: hasSelection,
             onSelect: () => events.fire('edit.separate')
         };
+        // merge the Scene Manager's marked layers (user CR 2026-09-11)
+        const mergeItem: MenuItem = {
+            text: () => i18n.t('menu.edit.merge'),
+            icon: createSvg(mergeSvg),
+            isEnabled: () => ((events.invoke('scene.markedSplats') as unknown[])?.length ?? 0) >= 2,
+            onSelect: () => events.fire('edit.merge')
+        };
         const toggleDepth: MenuItem = {
             text: () => i18n.t('popup.shortcuts.toggle-depth'),
             extra: shortcut('selection.toggleUseDepth'),
@@ -173,7 +181,9 @@ class ContextMenu extends Container {
         // a Scene Manager row (user CR 2026-09-08): the hide ops for that layer,
         // which the row's right-click has just made the edit target
         const layerPanel = new MenuPanel([
-            hideSelectedItem, hideUnselectedItem, unhideAllItem
+            hideSelectedItem, hideUnselectedItem, unhideAllItem,
+            separator,
+            mergeItem
         ]);
 
         this.append(navigationPanel);

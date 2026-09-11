@@ -15,6 +15,7 @@ import sceneExport from './svg/export.svg';
 import hiddenSvg from './svg/hidden.svg'; // [custom]
 import sceneImport from './svg/import.svg';
 import logoSvg from './svg/logo.svg';
+import mergeSvg from './svg/merge.svg'; // [custom]
 import sceneNew from './svg/new.svg';
 import sceneOpen from './svg/open.svg';
 import scenePublish from './svg/publish.svg';
@@ -282,6 +283,12 @@ class Menu extends Container {
             icon: createSvg(selectSeparate),
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('edit.separate')
+        }, {
+            // [custom] merge the Scene Manager's marked layers (user CR 2026-09-11)
+            text: () => i18n.t('menu.edit.merge'),
+            icon: createSvg(mergeSvg),
+            isEnabled: () => ((events.invoke('scene.markedSplats') as unknown[])?.length ?? 0) >= 2,
+            onSelect: () => events.fire('edit.merge')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{

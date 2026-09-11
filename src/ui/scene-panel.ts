@@ -5,6 +5,7 @@ import { ColorPanel } from './color-panel';
 import { i18n } from './localization';
 import { SplatList } from './splat-list';
 import sceneImportSvg from './svg/import.svg';
+import mergeSvg from './svg/merge.svg'; // [custom]
 import sceneNewSvg from './svg/new.svg';
 import soloSvg from './svg/solo.svg';
 import { Tooltips } from './tooltips';
@@ -61,6 +62,19 @@ class ScenePanel extends Container {
             events.fire('scene.solo', soloActive);
         });
 
+        // [custom] merge the marked layers (user CR 2026-09-11); enabled once
+        // two rows are marked with Ctrl / Shift + click
+        const mergeButton = new Container({
+            class: ['panel-header-button', 'disabled']
+        });
+        mergeButton.dom.appendChild(createSvg(mergeSvg));
+        mergeButton.on('click', () => {
+            events.fire('edit.merge');
+        });
+        events.on('scene.markedSplats.changed', (splats: unknown[]) => {
+            mergeButton.class[splats.length >= 2 ? 'remove' : 'add']('disabled');
+        });
+
         const sceneImport = new Container({
             class: 'panel-header-button'
         });
@@ -74,6 +88,7 @@ class ScenePanel extends Container {
         sceneHeader.append(sceneIcon);
         sceneHeader.append(sceneLabel);
         sceneHeader.append(soloToggle);
+        sceneHeader.append(mergeButton); // [custom]
         sceneHeader.append(sceneImport);
         sceneHeader.append(sceneNew);
 
@@ -86,6 +101,7 @@ class ScenePanel extends Container {
         });
 
         tooltips.register(soloToggle, () => i18n.t('tooltip.scene.solo'), 'top');
+        tooltips.register(mergeButton, () => i18n.t('tooltip.scene.merge'), 'top'); // [custom]
         tooltips.register(sceneImport, () => i18n.t('tooltip.scene.import'), 'top');
         tooltips.register(sceneNew, () => i18n.t('tooltip.scene.new'), 'top');
 

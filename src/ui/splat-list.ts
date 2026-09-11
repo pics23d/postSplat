@@ -281,9 +281,73 @@ class SplatList extends Container {
             }
         });
 
-        this.on('click', (item: SplatItem) => {
+        // [custom] marks for the layer merge (user CR 2026-09-11): Ctrl+click
+        // toggles a row, Shift+click marks the range from the last plain / Ctrl
+        // click, a plain click marks that row alone. The clicked row always
+        // becomes the edit target as before. `scene.markedSplats` lists the marks in
+        // list order; `scene.markSplats` sets them (harness / scripts).
+        const marked = new Set<Splat>();
+        let anchor: Splat | null = null;
+        const markedSplats = () => [...items.keys()].filter(splat => marked.has(splat));
+        const notifyMarked = () => {
+            items.forEach((item, splat) => {
+                item.class[marked.has(splat) ? 'add' : 'remove']('marked');
+            });
+            events.fire('scene.markedSplats.changed', markedSplats());
+        };
+        events.function('scene.markedSplats', markedSplats);
+        events.on('scene.markSplats', (splats: Splat[]) => {
+            marked.clear();
+            for (const splat of splats ?? []) {
+                if (items.has(splat)) {
+                    marked.add(splat);
+                }
+            }
+            anchor = splats?.length ? splats[splats.length - 1] : null;
+            notifyMarked();
+        });
+        events.on('scene.elementRemoved', (element: Element) => {
+            if (element.type === ElementType.splat && marked.has(element as Splat)) {
+                marked.delete(element as Splat);
+                if (anchor === element) {
+                    anchor = null;
+                }
+                notifyMarked();
+            }
+        });
+
+        this.on('click', (item: SplatItem, event?: MouseEvent) => {
             for (const [key, value] of items) {
                 if (item === value) {
+                    if (event?.ctrlKey || event?.metaKey) {
+                        // file-manager semantics (user feedback 2026-09-11): the
+                        // row that is already the edit target counts as marked,
+                        // so the first Ctrl+click yields two marks
+                        if (marked.size === 0) {
+                            const current = events.invoke('selection') as Splat;
+                            if (current && current !== key && items.has(current)) {
+                                marked.add(current);
+                            }
+                        }
+                        if (marked.has(key)) {
+                            marked.delete(key);
+                        } else {
+                            marked.add(key);
+                        }
+                        anchor = key;
+                    } else if (event?.shiftKey && anchor && items.has(anchor)) {
+                        const order = [...items.keys()];
+                        const a = order.indexOf(anchor);
+                        const b = order.indexOf(key);
+                        for (let i = Math.min(a, b); i <= Math.max(a, b); ++i) {
+                            marked.add(order[i]);
+                        }
+                    } else {
+                        marked.clear();
+                        marked.add(key);
+                        anchor = key;
+                    }
+                    notifyMarked();
                     if (soloMode && !key.visible) {
                         key.visible = true;
                     }
@@ -322,8 +386,10 @@ class SplatList extends Container {
         super._onAppendChild(element);
 
         if (element instanceof SplatItem) {
-            element.on('click', () => {
-                this.emit('click', element);
+            // [custom] the DOM event travels along so the list can read the
+            // Ctrl / Shift modifiers (layer marks)
+            element.dom.addEventListener('click', (event: MouseEvent) => {
+                this.emit('click', element, event);
             });
 
             element.on('removeClicked', () => {

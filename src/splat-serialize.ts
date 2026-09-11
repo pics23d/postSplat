@@ -840,6 +840,7 @@ const serializeSpz = async (splats: Splat[], settings: SpzSettings, fs: FileSyst
 
 export {
     Writer,
+    createExportSource, // [custom] merge layers (splat-merge.ts)
     writeResourceFile,
     writeSplatFile,
     serializeSog,

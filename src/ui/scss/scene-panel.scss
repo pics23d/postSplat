@@ -16,6 +16,12 @@
     display: none;
 }
 
+// [custom] the Merge button waits for two marked layers
+.panel-header-button.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 .panel-header-button.active,
 .panel-header-button.active:hover {
     background-color: $clr-hilight;
