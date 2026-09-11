@@ -30,6 +30,31 @@ class HintOverlay extends Container {
 
         super(args);
 
+        // the overlay is a toggle (user CR 2026-09-11: it took too much screen
+        // space to be always on): the status bar's Hints button and the X here
+        // flip it, the state is a persisted preference (hints.visible)
+        let visible = false;
+        this.hidden = true;
+        const close = new Label({ class: 'hint-close', text: '✕' });
+        close.dom.setAttribute('role', 'button');
+        i18n.onChange(() => close.dom.setAttribute('aria-label', i18n.t('tooltip.status-bar.hints')), close);
+        this.append(close);
+
+        const setVisible = (value: boolean) => {
+            if (value !== visible) {
+                visible = value;
+                this.hidden = !visible;
+                events.fire('hints.visible', visible);
+            }
+        };
+        events.function('hints.visible', () => visible);
+        events.on('hints.setVisible', (value: boolean) => setVisible(!!value));
+        events.on('hints.toggle', () => setVisible(!visible));
+        close.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            event.stopPropagation();
+            setVisible(false);
+        });
+
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = (id: string) => () => shortcutManager.formatShortcut(id) ?? '';
         const word = (localeKey: string) => () => i18n.t(localeKey);
@@ -139,8 +164,17 @@ class HintOverlay extends Container {
             fly.container.hidden = selecting || controlMode !== 'fly';
         };
 
+        // the tools container covers the viewport (and captures every pointer)
+        // while a drawing tool is active, so the ✕ could not be clicked anyway
+        // and its cursor flip would only confuse (user decision 2026-09-11):
+        // hide it then; tools without a pointer overlay (floater, sphere, box,
+        // the gizmos) keep it
+        // (looked up per event: the overlay is built before the editor's DOM
+        // tree is attached to the document)
         events.on('tool.activated', (toolName: string | null) => {
             activeTool = toolName ?? null;
+            const toolsContainer = document.getElementById('tools-container');
+            close.hidden = !!toolsContainer && toolsContainer.style.display === 'block';
             update();
         });
 

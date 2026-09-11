@@ -29,6 +29,19 @@ class StatusBar extends Container {
         });
         i18n.bindText(splatDataButton, () => i18n.t('status-bar.splat-data').toUpperCase());
 
+        // [custom] the context hint overlay's toggle (user CR 2026-09-11); not a
+        // panel, so it is independent of the timeline / splat data choice
+        const hintsButton = new Button({
+            class: 'status-bar-toggle'
+        });
+        i18n.bindText(hintsButton, () => i18n.t('status-bar.hints').toUpperCase());
+        hintsButton.on('click', () => {
+            events.fire('hints.toggle');
+        });
+        events.on('hints.visible', (visible: boolean) => {
+            hintsButton.dom.classList[visible ? 'add' : 'remove']('active');
+        });
+
         // Panel toggle logic
         const setActivePanel = (panel: string) => {
             activePanel = panel;
@@ -75,6 +88,7 @@ class StatusBar extends Container {
 
         this.append(timelineButton);
         this.append(splatDataButton);
+        this.append(hintsButton); // [custom]
         this.append(statsContainer);
 
         // register tooltips
@@ -92,6 +106,7 @@ class StatusBar extends Container {
 
         tooltips.register(timelineButton, tooltip('tooltip.status-bar.timeline', 'timelinePanel.toggle'), 'top');
         tooltips.register(splatDataButton, tooltip('tooltip.status-bar.splat-data', 'dataPanel.toggle'), 'top');
+        tooltips.register(hintsButton, tooltip('tooltip.status-bar.hints', 'hints.toggle'), 'top'); // [custom]
 
         // Handle keyboard shortcuts for panel toggles
         events.on('dataPanel.toggle', () => {

@@ -65,6 +65,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'edit.undo': { keys: ['z'], ctrl: 'required', repeat: true, capture: true },
     'edit.redo': { keys: ['z'], ctrl: 'required', shift: 'required', repeat: true, capture: true },
     'dataPanel.toggle': { keys: ['d'], ctrl: 'required', capture: true },
+    'hints.toggle': { keys: ['h'], ctrl: 'required', capture: true }, // [custom] context hint overlay
     'timelinePanel.toggle': { keys: ['t'], ctrl: 'required', capture: true },
 
     // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards

@@ -8,11 +8,31 @@
     bottom: 20px;
     pointer-events: none;
 
+    &.pcui-hidden {
+        display: none;
+    }
+
+    // the close cross is the one interactive element of the overlay
+    .hint-close {
+        position: absolute;
+        top: 4px;
+        right: 8px;
+        pointer-events: auto;
+        cursor: pointer;
+        color: $text-secondary;
+        font-size: 12px;
+        line-height: 16px;
+
+        &:hover {
+            color: $text-primary;
+        }
+    }
+
     .hint-section {
         display: flex;
         flex-direction: column;
         gap: 3px;
-        padding: 8px 10px;
+        padding: 8px 28px 8px 10px;
         border-radius: 6px;
         background-color: rgba(0, 0, 0, 0.45);
 

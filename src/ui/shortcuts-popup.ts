@@ -47,7 +47,8 @@ const popupConfig: Record<string, CategoryConfig> = {
         shortcuts: [
             { id: 'grid.toggleVisible', localeKey: 'popup.shortcuts.toggle-grid' },
             { id: 'view.toggleEditView', localeKey: 'popup.shortcuts.toggle-edit-view' },
-            { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' }
+            { id: 'camera.toggleShowInfo', localeKey: 'popup.shortcuts.toggle-camera-info' },
+            { id: 'hints.toggle', localeKey: 'tooltip.status-bar.hints' } // [custom]
         ]
     },
     selection: {
