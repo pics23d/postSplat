@@ -431,5 +431,6 @@
     "popup.shortcuts.remove-last-polygon-point": "Letzten Polygonpunkt entfernen",
     "popup.shortcuts.remove-tool-point": "Ausgewählten Mess-/Ausrichtungspunkt entfernen",
     "popup.shortcuts.stamp-key": "Schlüssel mit aktueller Kamerapose überschreiben",
-    "popup.shortcuts.copy-key": "Kopie des Schlüssels ziehen"
+    "popup.shortcuts.copy-key": "Kopie des Schlüssels ziehen",
+    "popup.shortcuts.cycle-ui": "Panels und Werkzeugleisten durchschalten"
 }

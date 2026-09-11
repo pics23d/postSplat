@@ -431,5 +431,6 @@
     "popup.shortcuts.remove-last-polygon-point": "Remove Last Polygon Point",
     "popup.shortcuts.remove-tool-point": "Remove Selected Measure/Orient Point",
     "popup.shortcuts.stamp-key": "Overwrite Key with Current Camera Pose",
-    "popup.shortcuts.copy-key": "Drag a Copy of the Key"
+    "popup.shortcuts.copy-key": "Drag a Copy of the Key",
+    "popup.shortcuts.cycle-ui": "Cycle Panels and Toolbars"
 }

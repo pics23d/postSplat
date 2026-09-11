@@ -431,5 +431,6 @@
     "popup.shortcuts.remove-last-polygon-point": "删除最后一个多边形点",
     "popup.shortcuts.remove-tool-point": "删除选中的测量/对齐点",
     "popup.shortcuts.stamp-key": "用当前相机姿态覆盖关键帧",
-    "popup.shortcuts.copy-key": "拖动关键帧的副本"
+    "popup.shortcuts.copy-key": "拖动关键帧的副本",
+    "popup.shortcuts.cycle-ui": "循环切换面板和工具栏"
 }

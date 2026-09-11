@@ -431,5 +431,6 @@
     "popup.shortcuts.remove-last-polygon-point": "Удалить последнюю точку полигона",
     "popup.shortcuts.remove-tool-point": "Удалить выбранную точку измерения/ориентации",
     "popup.shortcuts.stamp-key": "Перезаписать ключ текущей позой камеры",
-    "popup.shortcuts.copy-key": "Перетащить копию ключа"
+    "popup.shortcuts.copy-key": "Перетащить копию ключа",
+    "popup.shortcuts.cycle-ui": "Переключить панели и панели инструментов"
 }

@@ -11,6 +11,7 @@ import type { BlobReadSource } from '../io';
 import { AboutPopup } from './about-popup';
 import { BottomToolbar } from './bottom-toolbar';
 import { CameraInfoOverlay } from './camera-info-overlay';
+import { registerChromeEvents } from './chrome'; // [custom]
 import { ContextMenu } from './context-menu'; // [custom]
 import { ExportPopup } from './export-popup';
 import { HintOverlay } from './hint-overlay'; // [custom]
@@ -107,6 +108,10 @@ class EditorUI {
         // tooltips
         const tooltips = new Tooltips();
         tooltipsContainer.append(tooltips);
+
+        // [custom] Tab chrome cycle; before Menu, whose collapse button and
+        // mobile default drive it
+        registerChromeEvents(events);
 
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);

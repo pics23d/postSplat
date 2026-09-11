@@ -130,8 +130,13 @@ if (typeText !== null) {
 }
 
 const KEY_CODES = { Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46, ArrowUp: 38, ArrowDown: 40 };
-for (const key of keys) {
-    const base = { key, code: key, windowsVirtualKeyCode: KEY_CODES[key] ?? 0, nativeVirtualKeyCode: KEY_CODES[key] ?? 0 };
+// modifiers as CDP bit flags, spelled `Shift+Tab`, `Ctrl+Shift+A`
+const MODIFIERS = { alt: 1, ctrl: 2, control: 2, meta: 4, cmd: 4, shift: 8 };
+for (const spec of keys) {
+    const parts = spec.split('+');
+    const key = parts.pop();
+    const modifiers = parts.reduce((mask, name) => mask | (MODIFIERS[name.toLowerCase()] ?? 0), 0);
+    const base = { key, code: key, modifiers, windowsVirtualKeyCode: KEY_CODES[key] ?? 0, nativeVirtualKeyCode: KEY_CODES[key] ?? 0 };
     await call('Input.dispatchKeyEvent', { type: 'keyDown', ...base, ...(key === 'Enter' ? { text: '\r' } : {}) });
     await call('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
 }

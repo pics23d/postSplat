@@ -131,3 +131,11 @@
         display: none;
     }
 }
+
+// [custom] Tab cycle level 2 (ui/chrome.ts): the bottom and right toolbars go too
+.chrome-hidden {
+    #bottom-toolbar,
+    #right-toolbar {
+        display: none;
+    }
+}

@@ -431,5 +431,6 @@
     "popup.shortcuts.remove-last-polygon-point": "ポリゴンの最後の点を削除",
     "popup.shortcuts.remove-tool-point": "選択中の計測／整列ポイントを削除",
     "popup.shortcuts.stamp-key": "キーを現在のカメラポーズで上書き",
-    "popup.shortcuts.copy-key": "キーのコピーをドラッグ"
+    "popup.shortcuts.copy-key": "キーのコピーをドラッグ",
+    "popup.shortcuts.cycle-ui": "パネルとツールバーを切り替え"
 }

@@ -431,5 +431,6 @@
     "popup.shortcuts.remove-last-polygon-point": "Remover Último Ponto do Polígono",
     "popup.shortcuts.remove-tool-point": "Remover Ponto de Medida/Orientação Selecionado",
     "popup.shortcuts.stamp-key": "Sobrescrever Chave com a Pose Atual da Câmera",
-    "popup.shortcuts.copy-key": "Arrastar uma Cópia da Chave"
+    "popup.shortcuts.copy-key": "Arrastar uma Cópia da Chave",
+    "popup.shortcuts.cycle-ui": "Alternar painéis e barras de ferramentas"
 }

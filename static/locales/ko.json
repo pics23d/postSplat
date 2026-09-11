@@ -431,5 +431,6 @@
     "popup.shortcuts.remove-last-polygon-point": "마지막 다각형 점 제거",
     "popup.shortcuts.remove-tool-point": "선택한 측정/정렬 점 제거",
     "popup.shortcuts.stamp-key": "키를 현재 카메라 포즈로 덮어쓰기",
-    "popup.shortcuts.copy-key": "키 복사본 드래그"
+    "popup.shortcuts.copy-key": "키 복사본 드래그",
+    "popup.shortcuts.cycle-ui": "패널 및 도구 모음 전환"
 }

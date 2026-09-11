@@ -37,7 +37,8 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'select.unhide': { keys: ['h'], shift: 'required' },
     'selection.toggleUseDepth': { keys: ['n'] },
     'selection.toggleFootprint': { keys: ['m'] },
-    'view.toggleEditView': { keys: ['Tab'] },
+    'ui.cycleChrome': { keys: ['Tab'] }, // [custom] Tab cycles panels / toolbars (user CR 2026-09-11)
+    'view.toggleEditView': { keys: ['Tab'], shift: 'required' }, // [custom] was Tab
 
     // Tools
     // 1/2/3 don't fire tool.move/rotate/scale directly: while a shape
