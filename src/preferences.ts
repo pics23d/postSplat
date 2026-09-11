@@ -107,7 +107,9 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         // live visibility flags are the ACTIVE footprint mode's profile, so
         // their defaults depend on the live footprint - which sits earlier in
         // this table and has already been applied when they are evaluated
-        { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
+        // [custom] selection.useDepth is deliberately NOT persisted (user report
+        // 2026-09-11): the far plane is session state, and a launch with it
+        // restored darkens everything beyond the focal distance — a "black" app
         { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
         // [custom] colour multiplier (0 = black) for splats beyond the depth selection far plane (the plane itself is session state)
         { key: 'selection.depthFade', setCommand: 'selection.setDepthFade', getDefault: () => 0.25, validate: isNumber(0, 1), group: 'preferences' },
