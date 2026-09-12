@@ -1,5 +1,6 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
+import { desktop, isDesktop } from '../desktop/bridge'; // [custom]
 import { Events } from '../events';
 import { requestNavigateHome } from '../iframe-api';
 import { recentFiles } from '../recent-files';
@@ -134,11 +135,14 @@ class Menu extends Container {
         home.dom.setAttribute('tabindex', '0');
         home.dom.setAttribute('aria-label', 'SuperSplat');
         home.dom.setAttribute('title', 'SuperSplat');
-        home.dom.addEventListener('click', requestNavigateHome);
+        // [custom] desktop: the shell never navigates away, the site opens in
+        // the system browser (no beforeunload prompt, no lost window)
+        const navigateHome = () => (isDesktop() ? desktop().openExternal('https://superspl.at/') : requestNavigateHome());
+        home.dom.addEventListener('click', navigateHome);
         home.dom.addEventListener('keydown', (event: KeyboardEvent) => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                requestNavigateHome();
+                navigateHome();
             }
         });
         home.append(logo);

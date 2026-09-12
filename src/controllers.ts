@@ -118,8 +118,9 @@ class PointerController {
                     if (pressedButton === 1 && camera.controlMode === 'orbit' && !mmbDragged && event.type === 'pointerup') {
                         pickFocalPoint(event);
                     }
-                    // [custom] RMB tap (no drag) -> context menu at the cursor
-                    if (pressedButton === 2 && !rmbDragged) {
+                    // [custom] RMB tap (no drag) -> context menu at the cursor;
+                    // never on a pointercancel (it releases whatever is held)
+                    if (pressedButton === 2 && !rmbDragged && event.type === 'pointerup') {
                         const rect = target.getBoundingClientRect();
                         camera.scene.events.fire('contextMenu.open', {
                             clientX: event.clientX,
