@@ -17,8 +17,9 @@ import { Tooltips } from '../ui/tooltips';
 // touches the region and whose colour is within tolerance is selected
 // (select.colorWand). A drag seeds the flood from every point along the way.
 // Every click / stroke of the session is kept as a seed; Shift starts over.
-// With Contiguous off, the seeds' sampled colours are matched everywhere in
-// the scene instead (the global eyedropper).
+// Contiguous is **off by default** (user CR 2026-09-12): the seeds' sampled
+// colours are matched everywhere in the scene (the global eyedropper); turning
+// it on restricts the match to the flooded region under the seeds.
 //
 // The selection is previewed live: one SelectOp (set/add/remove/intersect
 // against the selection that existed when the session started, chosen with
@@ -62,7 +63,9 @@ class EyedropperSelection {
         let op: SelectOpKind = 'add';
         let metric: Metric = 'oklab';
         let tolerance = 0.1;
-        let contiguous = true;
+        // user CR 2026-09-12: the session starts in the global (scene-wide)
+        // mode; Contiguous is opt-in per session
+        let contiguous = false;
         // reference colours dropped by clicking their chips
         let excluded: Rgb[] = [];
 
