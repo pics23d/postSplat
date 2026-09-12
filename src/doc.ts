@@ -10,6 +10,7 @@ import { GaussianInstances } from './gaussian-instances';
 import { BrowserFileSystem, BlobReadSource, loadSplatSource, sourcesOf } from './io';
 import { recentFiles } from './recent-files';
 import { Scene } from './scene';
+import { Skybox } from './skybox'; // [custom]
 import { Splat } from './splat';
 import { writeResourceFile } from './splat-serialize';
 import { Transform } from './transform';
@@ -192,6 +193,17 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 }
             }
 
+            // [custom] the skybox layer travels with the document: the image
+            // file is stored verbatim in the archive
+            if (document.skybox?.file) {
+                const skyboxSource = await zipFs.createSource(document.skybox.file);
+                const skyboxBytes = await skyboxSource.read().readAll();
+                skyboxSource.close();
+                const skybox = await Skybox.load(scene.app.graphicsDevice, skyboxBytes, document.skybox.filename ?? document.skybox.file);
+                skybox.docDeserialize(document.skybox);
+                await scene.add(skybox);
+            }
+
             // reading the bound forces a recalculation (and its
             // scene.boundChanged event) so the deserialize steps below observe
             // the loaded scene's extents. The result must be consumed: the
@@ -294,6 +306,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         try {
             const splats = events.invoke('scene.allSplats') as Splat[];
             const groups = groupByResource(splats, options.compact ?? true);
+            const skybox = scene.skybox; // [custom]
+            const skyboxFile = skybox ? `skybox${skybox.extension}` : null;
 
             // layer -> the resource file it reads from, and its remapped records
             const layerInfo = new Map<Splat, { resource: number, records: ArrayBuffer }>();
@@ -320,7 +334,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     ...splat.docSerialize(),
                     resource: layerInfo.get(splat).resource,
                     instances: `instances_${i}.bin`
-                }))
+                })),
+                // [custom]
+                skybox: skybox ? { ...skybox.docSerialize(), file: skyboxFile } : undefined
             };
 
             // Create browser filesystem and zip filesystem
@@ -342,6 +358,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             for (let i = 0; i < splats.length; ++i) {
                 const writer = await zipFs.createWriter(`instances_${i}.bin`);
                 await writer.write(new Uint8Array(layerInfo.get(splats[i]).records));
+                await writer.close();
+            }
+
+            // [custom] the skybox image, verbatim
+            if (skybox) {
+                const writer = await zipFs.createWriter(skyboxFile);
+                await writer.write(skybox.bytes);
                 await writer.close();
             }
 

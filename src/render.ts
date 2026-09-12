@@ -125,6 +125,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // start rendering to offscreen buffer only
             scene.camera.startOffscreenMode(width, height);
             scene.camera.renderOverlays = false;
+            // [custom] the sampling render must see splats only, never the skybox
+            scene.camera.renderSkybox = !clean;
             scene.gizmoLayer.enabled = false;
             scene.centersLayer.enabled = false;
 
@@ -153,6 +155,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             cleanRender = false;
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
+            scene.camera.renderSkybox = true; // [custom]
             scene.gizmoLayer.enabled = true;
             scene.centersLayer.enabled = true;
             scene.camera.camera.clearColor.set(0, 0, 0, 0);
@@ -178,6 +181,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // start rendering to offscreen buffer only
             scene.camera.startOffscreenMode(is360 ? faceSize : width, is360 ? faceSize : height);
             scene.camera.renderOverlays = is360 ? false : showDebug;
+            // [custom] a transparent background leaves the skybox out too
+            scene.camera.renderSkybox = !transparentBg;
             scene.gizmoLayer.enabled = false;
             scene.centersLayer.enabled = false;
             if (!transparentBg) {
@@ -337,6 +342,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
+            scene.camera.renderSkybox = true; // [custom]
             scene.gizmoLayer.enabled = true;
             scene.centersLayer.enabled = true;
             scene.camera.clearPass.setClearColor(nullClr);
@@ -452,6 +458,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // start rendering to offscreen buffer only
                 scene.camera.startOffscreenMode(is360 ? faceSize : width, is360 ? faceSize : height);
                 scene.camera.renderOverlays = is360 ? false : showDebug;
+                scene.camera.renderSkybox = !transparentBg; // [custom]
                 scene.gizmoLayer.enabled = false;
                 scene.centersLayer.enabled = false;
                 if (!transparentBg) {
@@ -755,6 +762,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                 scene.camera.endOffscreenMode();
                 scene.camera.renderOverlays = true;
+                scene.camera.renderSkybox = true; // [custom]
                 scene.gizmoLayer.enabled = true;
                 scene.centersLayer.enabled = true;
                 scene.camera.clearPass.setClearColor(nullClr);

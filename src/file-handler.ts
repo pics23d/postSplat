@@ -9,6 +9,7 @@ import { Events } from './events';
 import { ExportSettings, loadExportSettings, saveExportSettings } from './export-settings';
 import { BlobReadSource, BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf, WriteTarget } from './io';
 import { Scene } from './scene';
+import { isSkyboxImage, Skybox } from './skybox'; // [custom]
 import { Splat } from './splat';
 import { SerializeSettings, serializeSog, serializeSpz, serializeViewer, SogSettings, SpzSettings, ViewerExportSettings, WebGPUUnavailableError, writeSplatFile } from './splat-serialize';
 import { i18n } from './ui/localization';
@@ -83,6 +84,15 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/x-gaussian-splat': ['.spz']
         }
     },
+    // [custom] equirectangular background image (skybox layer)
+    'skybox': {
+        description: 'Skybox Image (equirectangular)',
+        accept: {
+            'image/webp': ['.webp'],
+            'image/jpeg': ['.jpg', '.jpeg'],
+            'image/png': ['.png']
+        }
+    },
     'indexTxt': {
         description: 'Colmap Poses (Images.txt)',
         accept: {
@@ -109,6 +119,8 @@ const allImportTypes = {
         'application/ply': ['.ply'],
         'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz'],
         'image/webp': ['.webp'],
+        'image/jpeg': ['.jpg', '.jpeg'], // [custom] skybox
+        'image/png': ['.png'], // [custom] skybox
         'application/x-lcc': ['.lcc', '.lcc2', '.bin'],
         'text/plain': ['.txt']
     }
@@ -333,6 +345,22 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     };
 
+    // [custom] import an equirectangular image as the scene's skybox layer;
+    // one per scene, so a second import replaces the first
+    const importSkybox = async (file: ImportFile) => {
+        try {
+            const blob = file.contents ?? await (await fetch(file.url)).blob();
+            const bytes = new Uint8Array(await blob.arrayBuffer());
+            const skybox = await Skybox.load(scene.graphicsDevice, bytes, file.filename);
+            scene.skybox?.destroy();
+            await scene.add(skybox);
+            return skybox;
+        } catch (error) {
+            await showLoadError(error.message ?? error, file.filename);
+            return null;
+        }
+    };
+
     // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
     const importFiles = async (files: ImportFile[], animationFrame = false) => {
         const filenames = files.map(f => f.filename.toLowerCase());
@@ -350,7 +378,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i].toLowerCase();
-                if (['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz'].every(ext => !filename.endsWith(ext))) {
+                if (['.ssproj', '.ply', '.splat', '.sog', '.webp', '.jpg', '.jpeg', '.png', 'images.txt', '.json', '.ksplat', '.spz'].every(ext => !filename.endsWith(ext))) {
                     await showLoadError('Unrecognized file type', filename);
                     return;
                 }
@@ -370,6 +398,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     // load gaussian splat model
                     const model = await importSplatModel([files[i]], animationFrame);
                     if (model) result.push(model);
+                } else if (isSkyboxImage(filename)) {
+                    // [custom] a lone image (a SOG's webp set is caught by isSog above)
+                    await importSkybox(files[i]);
                 } else if (filename.endsWith('images.txt')) {
                     // load colmap frames
                     await loadImagesTxt(files[i], events);
@@ -393,7 +424,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz');
+        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.jpg,.jpeg,.png,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz');
         fileSelector.setAttribute('multiple', 'true');
 
         fileSelector.onchange = () => {
@@ -486,6 +517,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     filePickerTypes.lcc,
                     filePickerTypes.ksplat,
                     filePickerTypes.spz,
+                    filePickerTypes.skybox, // [custom]
                     filePickerTypes.indexTxt
                 ];
 
@@ -519,6 +551,42 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 if (error.name !== 'AbortError') {
                     console.error(error);
                 }
+            }
+        }
+    });
+
+    // [custom] File > Import Skybox: the image picker alone, routed to the
+    // skybox import (drag & drop and the general Import dialog take images too)
+    events.function('scene.importSkybox', async () => {
+        if (fileSelector) {
+            fileSelector.click();
+            return;
+        }
+        try {
+            const types = [filePickerTypes.skybox];
+            if (isDesktop()) {
+                const handles = await desktopShowOpenFilePicker('import', { multiple: false, types: types as any });
+                if (handles.length > 0) {
+                    await importSkybox({ filename: handles[0].name, url: handles[0].url });
+                }
+                return;
+            }
+            const handles = await window.showOpenFilePicker({
+                id: 'SuperSplatSkyboxImport',
+                multiple: false,
+                excludeAcceptAllOption: false,
+                types
+            });
+            if (handles.length > 0) {
+                await importSkybox({
+                    filename: handles[0].name,
+                    contents: await handles[0].getFile(),
+                    handle: handles[0]
+                });
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error(error);
             }
         }
     });

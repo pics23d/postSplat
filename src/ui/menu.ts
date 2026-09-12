@@ -243,6 +243,13 @@ class Menu extends Container {
                 await events.invoke('scene.import');
             }
         }, {
+            // [custom] equirectangular background image as a skybox layer
+            text: () => i18n.t('menu.file.import-skybox', { ellipsis: true }),
+            icon: createSvg(sceneImport),
+            onSelect: async () => {
+                await events.invoke('scene.importSkybox');
+            }
+        }, {
             text: () => i18n.t('menu.file.export'),
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel

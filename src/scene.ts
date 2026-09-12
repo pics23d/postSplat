@@ -27,6 +27,8 @@ import { PCApp } from './pc-app';
 import { ProjectedSplatRenderer } from './projected-splat-renderer';
 import { SceneConfig } from './scene-config';
 import { SceneState } from './scene-state';
+import { Skybox } from './skybox'; // [custom]
+import { SkyboxRenderer } from './skybox-renderer'; // [custom]
 import { Splat } from './splat';
 import { SplatCenters } from './splat-centers';
 import { Underlay } from './underlay';
@@ -184,6 +186,7 @@ class Scene {
     grid: Grid;
     outline: Outline;
     underlay: Underlay;
+    skyboxRenderer: SkyboxRenderer; // [custom]
 
     // shared queue for serialising async splat work. exposed so subsystems that
     // need to order their async work alongside edit-history operations can do so
@@ -364,6 +367,11 @@ class Scene {
         this.splatCenters = new SplatCenters();
         this.add(this.splatCenters);
 
+        // [custom] before the grid: preRenderLayer hooks fire in registration
+        // order and the sky must be drawn underneath it
+        this.skyboxRenderer = new SkyboxRenderer();
+        this.add(this.skyboxRenderer);
+
         this.grid = new Grid();
         this.add(this.grid);
 
@@ -383,6 +391,13 @@ class Scene {
         splats.forEach((splat) => {
             (splat as Splat).destroy();
         });
+        // [custom] the skybox layer goes with the scene
+        this.getElementsByType(ElementType.skybox).forEach(skybox => skybox.destroy());
+    }
+
+    // [custom] the scene's skybox layer (at most one), or null
+    get skybox(): Skybox | null {
+        return (this.getElementsByType(ElementType.skybox)[0] as Skybox) ?? null;
     }
 
     // elements removed while their add() was still awaiting element.add().

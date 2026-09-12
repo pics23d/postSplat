@@ -22,6 +22,11 @@
             box-shadow: inset 3px 0 0 $clr-hilight;
         }
 
+        // [custom] the skybox layer: a background image, never the edit target
+        &.skybox .splat-item-text {
+            font-style: italic;
+        }
+
         #splat-edit {
             margin: 0;
             flex-grow: 1;

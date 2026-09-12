@@ -10,9 +10,15 @@
 //   color-clusters.ply four spatially separated clusters with distinct colors
 //                      (2000 splats each). Color-selection check: selecting by
 //                      one cluster's color must select exactly its count.
+//   skybox-test.png    512x256 equirectangular image with one flat colour per
+//                      direction: up blue, down green, +X red, -X yellow,
+//                      +Z magenta, -Z cyan (engine mapping u = atan2(x, z) / 2pi
+//                      + 0.5, v = 0.5 - asin(y) / pi). Skybox check: the pixel
+//                      at the view centre must be the colour of the view direction.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 const SH_C0 = 0.28209479177387814;
 const dcEncode = v => (v - 0.5) / SH_C0;
@@ -102,9 +108,78 @@ const colorClusters = () => {
     return splats;
 };
 
+// minimal 8-bit RGB PNG writer (one IDAT, filter 0 per row)
+const writePng = (file, width, height, rgb) => {
+    const chunk = (type, data) => {
+        const typeBytes = Buffer.from(type, 'latin1');
+        const len = Buffer.alloc(4);
+        len.writeUInt32BE(data.length);
+        const crc = Buffer.alloc(4);
+        crc.writeUInt32BE(zlib.crc32(data, zlib.crc32(typeBytes)) >>> 0);
+        return Buffer.concat([len, typeBytes, data, crc]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(width, 0);
+    ihdr.writeUInt32BE(height, 4);
+    ihdr[8] = 8;    // bit depth
+    ihdr[9] = 2;    // colour type: RGB
+    const raw = Buffer.alloc((width * 3 + 1) * height);
+    for (let y = 0; y < height; ++y) {
+        raw[y * (width * 3 + 1)] = 0;
+        rgb.copy(raw, y * (width * 3 + 1) + 1, y * width * 3, (y + 1) * width * 3);
+    }
+    const png = Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        chunk('IHDR', ihdr),
+        chunk('IDAT', zlib.deflateSync(raw)),
+        chunk('IEND', Buffer.alloc(0))
+    ]);
+    fs.writeFileSync(file, png);
+    return png.length;
+};
+
+// the direction -> colour table the skybox check reads back (see header)
+const SKYBOX_COLORS = {
+    up: [0, 0, 255],
+    down: [0, 255, 0],
+    '+x': [255, 0, 0],
+    '-x': [255, 255, 0],
+    '+z': [255, 0, 255],
+    '-z': [0, 255, 255]
+};
+
+const skyboxTest = (width = 512, height = 256) => {
+    const rgb = Buffer.alloc(width * height * 3);
+    for (let y = 0; y < height; ++y) {
+        const v = (y + 0.5) / height;
+        for (let x = 0; x < width; ++x) {
+            const u = (x + 0.5) / width;
+            let color;
+            if (v < 0.25) {
+                color = SKYBOX_COLORS.up;
+            } else if (v >= 0.75) {
+                color = SKYBOX_COLORS.down;
+            } else if (u >= 0.625 && u < 0.875) {
+                color = SKYBOX_COLORS['+x'];
+            } else if (u >= 0.375 && u < 0.625) {
+                color = SKYBOX_COLORS['+z'];
+            } else if (u >= 0.125 && u < 0.375) {
+                color = SKYBOX_COLORS['-x'];
+            } else {
+                color = SKYBOX_COLORS['-z'];
+            }
+            rgb[(y * width + x) * 3] = color[0];
+            rgb[(y * width + x) * 3 + 1] = color[1];
+            rgb[(y * width + x) * 3 + 2] = color[2];
+        }
+    }
+    return rgb;
+};
+
 const outDir = process.argv[2] ?? path.join('test', 'fixtures');
 const results = {
     'two-planes.ply': writePly(path.join(outDir, 'two-planes.ply'), twoPlanes()),
     'color-clusters.ply': writePly(path.join(outDir, 'color-clusters.ply'), colorClusters())
 };
-console.log(JSON.stringify({ outDir, splatCounts: results }, null, 2));
+const skyboxBytes = writePng(path.join(outDir, 'skybox-test.png'), 512, 256, skyboxTest());
+console.log(JSON.stringify({ outDir, splatCounts: results, 'skybox-test.png': skyboxBytes }, null, 2));

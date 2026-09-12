@@ -3,7 +3,9 @@ import { Container, Label, Element as PcuiElement, TextInput } from '@playcanvas
 import { SplatRenameOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
+import { Skybox } from '../skybox'; // [custom]
 import { Splat } from '../splat';
+import { i18n } from './localization'; // [custom]
 import deleteSvg from './svg/delete.svg';
 import hiddenSvg from './svg/hidden.svg';
 import shownSvg from './svg/shown.svg';
@@ -182,11 +184,73 @@ class SplatList extends Container {
             id: 'splat-edit'
         });
 
+        // [custom] the skybox layer's row (user CR 2026-09-12): visibility,
+        // rename and remove act on the element directly - no history op, no
+        // selection, no marks; it is a background image, not a Splat. It stays
+        // the last row: splat rows appended later are moved above it.
+        let skyboxItem: SplatItem | null = null;
+        const keepSkyboxLast = () => {
+            if (skyboxItem) {
+                this.dom.appendChild(skyboxItem.dom);
+            }
+        };
+
+        events.on('scene.elementAdded', (element: Element) => {
+            if (element.type === ElementType.skybox) {
+                const skybox = element as Skybox;
+                const item = new SplatItem(skybox.name, edit);
+                item.class.add('skybox');
+                item.dom.title = i18n.t('panel.scene.skybox');
+                this.append(item);
+                skyboxItem = item;
+
+                item.on('visible', () => {
+                    skybox.visible = true;
+                });
+                item.on('invisible', () => {
+                    skybox.visible = false;
+                });
+                item.on('rename', (value: string) => {
+                    skybox.name = value;
+                });
+                item.on('removeClicked', async () => {
+                    const result = await events.invoke('showPopup', {
+                        type: 'yesno',
+                        header: i18n.t('popup.remove-skybox'),
+                        message: i18n.t('popup.remove-skybox-message', { name: skybox.name })
+                    });
+                    if (result?.action === 'yes') {
+                        skybox.destroy();
+                    }
+                });
+            }
+        });
+
+        events.on('scene.elementRemoved', (element: Element) => {
+            if (element.type === ElementType.skybox && skyboxItem) {
+                this.remove(skyboxItem);
+                skyboxItem = null;
+            }
+        });
+
+        events.on('skybox.visibility', (skybox: Skybox) => {
+            if (skyboxItem) {
+                skyboxItem.visible = skybox.visible;
+            }
+        });
+
+        events.on('skybox.name', (skybox: Skybox) => {
+            if (skyboxItem) {
+                skyboxItem.name = skybox.name;
+            }
+        });
+
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.splat) {
                 const splat = element as Splat;
                 const item = new SplatItem(splat.name, edit);
                 this.append(item);
+                keepSkyboxLast(); // [custom]
                 items.set(splat, item);
 
                 if (soloMode) {

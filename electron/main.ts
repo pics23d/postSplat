@@ -20,7 +20,7 @@ import { appUrl, installAppProtocol, registerAppScheme, registerFile } from './p
 
 const DIST_DIR = path.join(__dirname, '..', '..', 'dist');
 const ICON = path.join(DIST_DIR, 'static', 'icons', 'logo-512.png');
-const LOADABLE = new Set(['.ply', '.sog', '.spz', '.splat', '.ksplat', '.ssproj', '.json', '.txt', '.abc', '.zip']);
+const LOADABLE = new Set(['.ply', '.sog', '.spz', '.splat', '.ksplat', '.ssproj', '.json', '.txt', '.abc', '.zip', '.webp', '.jpg', '.jpeg', '.png']);
 const argValue = (name: string) => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3);
 // --log-file=<path> appends renderer console + shell diagnostics to a file
 // (stdout piping through npx/grep buffers; a file is what the harness reads).

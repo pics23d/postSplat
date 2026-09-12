@@ -9,6 +9,7 @@ enum ElementType {
     splat = 'splat',
     shadow = 'shadow',
     debug = 'debug',
+    skybox = 'skybox', // [custom] equirectangular background image layer
     other = 'other'
 }
 
@@ -18,6 +19,7 @@ const ElementTypeList = [
     ElementType.splat,
     ElementType.shadow,
     ElementType.debug,
+    ElementType.skybox, // [custom]
     ElementType.other
 ];
 

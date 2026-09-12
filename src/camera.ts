@@ -122,6 +122,10 @@ class Camera extends Element {
 
     renderOverlays = true;
 
+    // [custom] the skybox layer is drawn behind the scene; off for the
+    // eyedropper's sampling render and transparent-background exports
+    renderSkybox = true;
+
     updateCameraUniforms: () => void;
 
     constructor() {
