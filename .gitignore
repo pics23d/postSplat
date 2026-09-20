@@ -1,5 +1,4 @@
 .claude/*
-!.claude/settings.json
 .cursor
 .DS_Store
 .idea
@@ -14,3 +13,6 @@ electron/dist
 _bkp
 _input
 _notes
+
+# [custom] local dev journal + machine-local agent settings, not published
+Claude.md

@@ -1,9 +1,8 @@
 {
-    "name": "supersplat",
-    "version": "3.1.2",
-    "author": "PlayCanvas<support@playcanvas.com>",
-    "homepage": "https://playcanvas.com/supersplat/editor",
-    "description": "3D Gaussian Splat Editor",
+    "name": "supersplat-desktop",
+    "version": "0.1.0",
+    "author": "Guy Middleton",
+    "description": "Unofficial Windows desktop fork of PlayCanvas SuperSplat (3D Gaussian Splat editor)",
     "keywords": [
         "playcanvas",
         "ply",
