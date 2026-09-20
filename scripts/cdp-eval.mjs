@@ -19,6 +19,7 @@ let awaitPromise = false;
 let focus = false;
 let click = null;
 let drag = null;
+let move = null;
 let typeText = null;
 const keys = [];
 let timeoutMs = 15000;
@@ -45,6 +46,9 @@ for (let i = 0; i < args.length; i++) {
         // synthesize a left click at CSS pixel x,y first: grants user activation, which
         // Chromium requires before it honours beforeunload / prompts
         click = args[++i].split(',').map(Number);
+    } else if (args[i] === '--move') {
+        // move the mouse without pressing, e.g. to raise a hover tooltip
+        move = args[++i].split(',').map(Number);
     } else if (args[i] === '--drag') {
         // synthesize a left drag x1,y1,x2,y2 (css px): press, 24 moves, release
         drag = args[++i].split(',').map(Number);
@@ -114,6 +118,11 @@ if (click) {
     await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button, buttons: 0, clickCount: 1 });
 }
 
+if (move) {
+    const [x, y] = move;
+    await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, buttons: 0 });
+}
+
 if (drag) {
     const [x1, y1, x2, y2] = drag;
     const mask = BUTTON_MASK[button];
@@ -129,7 +138,7 @@ if (typeText !== null) {
     await call('Input.insertText', { text: typeText });
 }
 
-const KEY_CODES = { Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46, ArrowUp: 38, ArrowDown: 40 };
+const KEY_CODES = { Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46, ArrowUp: 38, ArrowDown: 40, F1: 112 };
 // modifiers as CDP bit flags, spelled `Shift+Tab`, `Ctrl+Shift+A`
 const MODIFIERS = { alt: 1, ctrl: 2, control: 2, meta: 4, cmd: 4, shift: 8 };
 for (const spec of keys) {

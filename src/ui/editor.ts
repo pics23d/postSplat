@@ -109,9 +109,13 @@ class EditorUI {
         const tooltips = new Tooltips();
         tooltipsContainer.append(tooltips);
 
-        // [custom] Tab chrome cycle; before Menu, whose collapse button and
+        // [custom] F1 chrome cycle; before Menu, whose collapse button and
         // mobile default drive it
         registerChromeEvents(events);
+
+        // [custom] a control the cursor rests on can disappear with its panel,
+        // leaving its tooltip stranded over the viewport
+        events.on('ui.chrome', () => tooltips.hide());
 
         // bottom toolbar
         const scenePanel = new ScenePanel(events, tooltips);

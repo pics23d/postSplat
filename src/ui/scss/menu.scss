@@ -132,10 +132,33 @@
     }
 }
 
-// [custom] Tab cycle level 2 (ui/chrome.ts): the bottom and right toolbars go too
+// [custom] F1 cycle level 2 (ui/chrome.ts): the bottom and right toolbars go too
 .chrome-hidden {
     #bottom-toolbar,
     #right-toolbar {
+        display: none;
+    }
+
+    // [custom] the active tool's option bar and the three right-toolbar
+    // popups (Appearance / Overlays / Preferences, shared class .options-panel)
+    // go with the toolbars (user CR 2026-09-12). They keep their open state and
+    // come back at level 0. :not(.pcui-hidden) to outrank the rules that set
+    // display: flex at the same specificity.
+    .select-toolbar:not(.pcui-hidden),
+    .options-panel:not(.pcui-hidden) {
+        display: none;
+    }
+
+    // [custom] and the two full-width work panels plus the viewport
+    // decorations (user CR 2026-09-12). The status bar and the menu's
+    // collapsed logo + arrow deliberately stay: the arrow is the only mouse
+    // route back. #data-panel / #timeline-panel carry their own
+    // id:not(.pcui-hidden) rule, so these need the :not() to outrank it.
+    #data-panel:not(.pcui-hidden),
+    #timeline-panel:not(.pcui-hidden),
+    #view-cube-container,
+    #camera-info-overlay,
+    #app-label {
         display: none;
     }
 }

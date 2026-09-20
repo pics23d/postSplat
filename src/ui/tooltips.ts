@@ -10,6 +10,7 @@ type TooltipText = string | (() => string);
 class Tooltips extends Container {
     register: (target: Element, text: TooltipText, direction?: Direction) => void;
     unregister: (target: Element) => void;
+    hide: () => void;
     destroy: () => void;
 
     constructor(args: any = {}) {
@@ -132,6 +133,18 @@ class Tooltips extends Container {
                 value.dom.removeEventListener('pointerleave', value.leave);
                 targets.delete(target);
             }
+        };
+
+        // [custom] drop a showing tooltip without waiting for pointerleave: the
+        // hovered control can vanish under the cursor (F1 hides the toolbars),
+        // and a display:none element fires no leave event, so the tooltip would
+        // hang over the viewport until something else is hovered.
+        this.hide = () => {
+            if (timer >= 0) {
+                clearTimeout(timer);
+                timer = -1;
+            }
+            style.display = 'none';
         };
 
         this.destroy = () => {

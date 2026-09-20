@@ -37,8 +37,12 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'select.unhide': { keys: ['h'], shift: 'required' },
     'selection.toggleUseDepth': { keys: ['n'] },
     'selection.toggleFootprint': { keys: ['m'] },
-    'ui.cycleChrome': { keys: ['Tab'] }, // [custom] Tab cycles panels / toolbars (user CR 2026-09-11)
-    'view.toggleEditView': { keys: ['Tab'], shift: 'required' }, // [custom] was Tab
+    // [custom] F1 cycles panels / toolbars (user CR 2026-09-12, was Tab): Tab is in
+    // shortcuts.ts controlKeys, so it only ever reached here while focus sat on the
+    // body - clicking any toolbar button left Tab doing focus traversal instead.
+    // F1 is not a control key and Electron gives it no default, so it always fires.
+    'ui.cycleChrome': { keys: ['F1'] },
+    'view.toggleEditView': { keys: ['F1'], shift: 'required' }, // [custom] was Tab, then Shift+Tab
 
     // Tools
     // 1/2/3 don't fire tool.move/rotate/scale directly: while a shape

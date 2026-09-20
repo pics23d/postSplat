@@ -1,6 +1,6 @@
 import { Events } from '../events';
 
-// [custom] Tab cycles the editor chrome (user CR 2026-09-11):
+// [custom] F1 cycles the editor chrome (user CR 2026-09-11, moved off Tab 2026-09-12):
 //   level 0 = everything shown (default canvas)
 //   level 1 = scene manager + menu collapsed (what the collapse button next to
 //             Help does; body.collapsed)
@@ -15,7 +15,7 @@ const registerChromeEvents = (events: Events) => {
     const apply = () => {
         document.body.classList.toggle('collapsed', level >= 1);
         document.body.classList.toggle('chrome-hidden', level >= 2);
-        // the first Tab closes the hint overlay too (user CR 2026-09-11);
+        // the first F1 closes the hint overlay too (user CR 2026-09-11);
         // same persisted state as Ctrl+H / the Hints button, so it stays
         // closed when the default canvas returns
         if (level > 0) {

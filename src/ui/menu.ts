@@ -98,7 +98,7 @@ class Menu extends Container {
         });
         i18n.bindText(help, 'menu.help');
 
-        // [custom] the collapse state lives in ui/chrome.ts (Tab cycles it)
+        // [custom] the collapse state lives in ui/chrome.ts (F1 cycles it)
         const toggleCollapsed = () => {
             events.fire('ui.setChrome', document.body.classList.contains('collapsed') ? 0 : 1);
         };
