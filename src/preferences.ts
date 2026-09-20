@@ -107,10 +107,17 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: any) 
         // live visibility flags are the ACTIVE footprint mode's profile, so
         // their defaults depend on the live footprint - which sits earlier in
         // this table and has already been applied when they are evaluated
-        // [custom] selection.useDepth is deliberately NOT persisted (user report
-        // 2026-09-11): the far plane is session state, and a launch with it
-        // restored darkens everything beyond the focal distance — a "black" app
+        // [custom] selection.useDepth - the master toggle - is deliberately NOT
+        // persisted (user report 2026-09-11): a launch with the far plane
+        // restored darkens everything beyond the focal distance, a "black" app.
+        // Its two gates below DO persist, so the modes you chose survive while
+        // the enable starts off every session and nothing darkens at startup.
         { key: 'selection.footprint', setCommand: 'selection.setFootprint', getDefault: () => 0, validate: isNumber(0, 1) },
+        // [custom] occlusion = upstream's per-pixel frontmost pick, on by default
+        // so depth behaves the way upstream's N always did
+        { key: 'selection.occlusion', setCommand: 'selection.setOcclusion', getDefault: () => true, validate: isBool },
+        // [custom] far plane = the view-space distance cutoff, opt-in
+        { key: 'selection.depthPlane', setCommand: 'selection.setDepthPlane', getDefault: () => false, validate: isBool },
         // [custom] colour multiplier (0 = black) for splats beyond the depth selection far plane (the plane itself is session state)
         { key: 'selection.depthFade', setCommand: 'selection.setDepthFade', getDefault: () => 0.25, validate: isNumber(0, 1), group: 'preferences' },
         { key: 'view.gaussians', setCommand: 'view.setGaussians', getDefault: () => true, validate: isBool, group: 'appearance' },

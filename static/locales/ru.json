@@ -186,6 +186,8 @@
     "select-toolbar.clear-samples": "Очистить",
     "select-toolbar.contiguous": "Смежные",
     "select-toolbar.min-size": "Мин. размер",
+    "select-toolbar.occlusion": "Перекрытие",
+    "select-toolbar.depth-plane": "Дальняя плоскость",
     "select-toolbar.max-opacity": "Макс. непрозрачность",
     "popup.ok": "ОК",
     "popup.cancel": "Отмена",

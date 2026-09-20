@@ -207,8 +207,13 @@ await fire('edit.undo');
 await sleep(150);
 expect('undo of the preview op clears it', (await splatState()).selected, 0);
 
-// depth plane: the pick and the kernel are gated
+// depth plane: the pick and the kernel are gated. The far plane is one of two
+// gates under the depth toggle and is opt-in (occlusion, upstream's per-pixel
+// pick, is the default), so enable it explicitly - the toggle alone is no
+// longer enough. Occlusion off: these checks are about the plane.
 await fire('selection.setUseDepth', true);
+await fire('selection.setOcclusion', false);
+await fire('selection.setDepthPlane', true);
 await fire('selection.setDepthFar', 3);
 const redPoint = await screenPoint(...clusters.red.at);
 expect('far 3: sampling render leaves out splats beyond the plane', await invoke('select.colorSample', redPoint), null);
@@ -216,9 +221,11 @@ expect('far 3: kernel gated', await match('set', [ref.red], { metric: 'oklab', t
 await fire('selection.setDepthFar', 7);
 expect('far 7: red cluster again', await match('set', [ref.red], { metric: 'oklab', tolerance: 0.1 }), 2000);
 
-// restore
+// restore, including the gate defaults (occlusion on, far plane off)
 await fire('selection.setDepthFar', 0);
 await fire('selection.setUseDepth', false);
+await fire('selection.setOcclusion', true);
+await fire('selection.setDepthPlane', false);
 await fire('select.none');
 await fire('camera.reset');
 await fire('camera.setFov', storedFov);

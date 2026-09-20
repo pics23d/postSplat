@@ -186,6 +186,8 @@
     "select-toolbar.clear-samples": "지우기",
     "select-toolbar.contiguous": "인접",
     "select-toolbar.min-size": "최소 크기",
+    "select-toolbar.occlusion": "가림",
+    "select-toolbar.depth-plane": "원거리 평면",
     "select-toolbar.max-opacity": "최대 불투명도",
     "popup.ok": "확인",
     "popup.cancel": "취소",

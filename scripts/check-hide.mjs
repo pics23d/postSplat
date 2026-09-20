@@ -135,12 +135,20 @@ await evaluate(`(() => {
 await sleep(300);
 
 const fullRect = { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } };
+// the front plane = a full-viewport rect gated by the depth far plane at 5.
+// The far plane is one of two gates under the depth toggle and is opt-in, so
+// enable it explicitly and turn occlusion (upstream's per-pixel pick) off -
+// that would select only the splats winning a pixel, not the whole plane.
 const selectFront = async () => {
     await fire('selection.setUseDepth', true);
+    await fire('selection.setOcclusion', false);
+    await fire('selection.setDepthPlane', true);
     await fire('selection.setDepthFar', 5);
     await fire('selection.setFootprint', 0);
     await invoke('select.rect', 'set', fullRect);
     await fire('selection.setUseDepth', false);
+    await fire('selection.setOcclusion', true);
+    await fire('selection.setDepthPlane', false);
     await sleep(150);
     return (await active()).selected;
 };

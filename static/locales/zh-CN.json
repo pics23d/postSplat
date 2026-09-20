@@ -186,6 +186,8 @@
     "select-toolbar.clear-samples": "清除",
     "select-toolbar.contiguous": "连续",
     "select-toolbar.min-size": "最小尺寸",
+    "select-toolbar.occlusion": "遮挡",
+    "select-toolbar.depth-plane": "远平面",
     "select-toolbar.max-opacity": "最大不透明度",
     "popup.ok": "确定",
     "popup.cancel": "取消",

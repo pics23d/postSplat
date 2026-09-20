@@ -1,6 +1,8 @@
-// [custom] Regression check for the depth selection far plane (M3): with the
-// depth toggle on, viewport selections must exclude splats beyond the plane,
-// and the render must fade them.
+// [custom] Regression check for depth selection: the far plane (M3) and, since
+// the gate split, the 2x2 matrix of the two orthogonal gates under the depth
+// toggle - Occlusion (upstream's per-pixel frontmost pick) and Far plane.
+// With the plane on, viewport selections must exclude splats beyond it and the
+// render must fade them; with occlusion on, hidden splats must not be selected.
 //
 // Fixture: test/fixtures/two-planes.ply - front plane z=0 (red, 4096 splats),
 // back plane z=-2 (blue, 4096). The camera is parked at (0,0,4) looking at the
@@ -102,6 +104,14 @@ const rectSelect = async () => {
     return (await splatState()).selected;
 };
 
+// [custom] depth is two orthogonal gates under the master toggle: occlusion
+// (upstream's per-pixel frontmost pick) and the far plane. Set them explicitly
+// so a stored preference can't change what these checks mean.
+const setGates = async (occlusion, plane) => {
+    await fire('selection.setOcclusion', occlusion);
+    await fire('selection.setDepthPlane', plane);
+};
+
 // baseline: depth off, centers -> everything
 await fire('selection.setUseDepth', false);
 await fire('selection.setFootprint', 0);
@@ -109,6 +119,7 @@ expect('depth off, rect selects both planes', await rectSelect(), 8192);
 
 // plane between the planes: only the front plane, in both footprint modes
 await fire('selection.setUseDepth', true);
+await setGates(false, true);
 await fire('selection.setDepthFar', 5);
 expect('far 5, centers: front plane only', await rectSelect(), 4096);
 await fire('selection.setFootprint', 1);
@@ -160,9 +171,41 @@ console.log(`centre red: off ${normal.r.toFixed(1)}, far 3 at fade ${userFade} $
 expect('far 3 at fade 0.05 fades the front plane (centre red drops > 60%)', faded.r < normal.r * 0.4, true);
 expect('the stored fade fades it too (centre red drops > 25%)', defaultFade.r < normal.r * 0.75, true);
 
-// restore
+// [custom] the 2x2 gate matrix. Occlusion and the far plane answer different
+// questions - "is it hidden behind something" vs "is it too far away" - and
+// compose, because picker.prepareId depth-gates the id pass unconditionally.
+await fire('select.none');
+await fire('selection.setUseDepth', true);
+await fire('selection.setDepthFar', 5);
+
+await setGates(false, false);
+expect('both gates off: plane inert, effectiveDepthFar 0', await invoke('selection.effectiveDepthFar'), 0);
+expect('both gates off: rect selects both planes', await rectSelect(), 8192);
+
+// occlusion alone = upstream's behaviour: the back plane hides behind the front
+// one, so the id pass never reports it. Asserted as a relationship rather than a
+// count - how many splats win a pixel depends on the pick pass resolution.
+await setGates(true, false);
+const occluded = await rectSelect();
+expect('occlusion only: far plane stays inert', await invoke('selection.effectiveDepthFar'), 0);
+expect(`occlusion only: the hidden back plane is excluded (${occluded} < 8192)`, occluded < 8192 && occluded > 2000, true);
+
+await setGates(false, true);
+expect('far plane only (far 5): front plane', await rectSelect(), 4096);
+
+// both: frontmost AND within the plane. Never more than occlusion alone, and
+// with the plane in front of everything the composition selects nothing - the
+// proof that the plane gates the id pass too.
+await setGates(true, true);
+const both = await rectSelect();
+expect(`both gates (far 5): no more than occlusion alone (${both} <= ${occluded})`, both <= occluded && both > 0, true);
+await fire('selection.setDepthFar', 3);
+expect('both gates, plane in front of everything: nothing', await rectSelect(), 0);
+
+// restore: defaults are occlusion on, far plane off (upstream behaviour)
 await fire('selection.setDepthFar', 0);
 await fire('selection.setUseDepth', false);
+await setGates(true, false);
 await fire('select.none');
 await fire('camera.reset');
 ws.close();

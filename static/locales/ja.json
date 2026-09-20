@@ -186,6 +186,8 @@
     "select-toolbar.clear-samples": "クリア",
     "select-toolbar.contiguous": "隣接",
     "select-toolbar.min-size": "最小サイズ",
+    "select-toolbar.occlusion": "オクルージョン",
+    "select-toolbar.depth-plane": "遠方平面",
     "select-toolbar.max-opacity": "最大不透明度",
     "popup.ok": "OK",
     "popup.cancel": "キャンセル",

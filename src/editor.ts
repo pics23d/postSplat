@@ -432,9 +432,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // centers intersect at footprint 0, otherwise the footprint pass, which
     // tests each splat's projected ellipse against the region through all depths
     const selectionMethod = (): 'pick' | 'footprint' | 'centers' => {
-        // [custom] the depth toggle is a view-space far plane now (see
-        // selection.effectiveDepthFar): gestures always run through all layers
-        // and the plane gates them, so the per-pixel 'pick' path is unreachable
+        // [custom] depth selection is two orthogonal gates, both under the depth
+        // toggle: Occlusion is upstream's per-pixel id pick (frontmost wins) and
+        // Far plane is a view-space cutoff (see selection.effectiveDepthFar).
+        // They compose - the id pass is depth-gated in picker.prepareId - so all
+        // four combinations are reachable and only occlusion picks the method.
+        if (events.invoke('selection.useDepth') && events.invoke('selection.occlusion')) {
+            return 'pick';
+        }
         return (events.invoke('selection.footprint') as number) > 0 ? 'footprint' : 'centers';
     };
 
@@ -1531,7 +1536,33 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     let selectionUseDepth = false;
     let selectionFootprint = 0;
 
+    // [custom] the two depth gates the toggle above enables, each persisted
+    // (see preferences.ts) while the toggle itself is session state. Occlusion
+    // is upstream's behaviour and the default, so out of the box N behaves the
+    // way it always has; the far plane is opt-in.
+    let selectionOcclusion = true;
+    let selectionDepthPlane = false;
+
     events.function('selection.useDepth', () => selectionUseDepth);
+
+    events.function('selection.occlusion', () => selectionOcclusion);
+
+    events.on('selection.setOcclusion', (value: boolean) => {
+        if (value !== selectionOcclusion) {
+            selectionOcclusion = value;
+            events.fire('selection.occlusion', value);
+        }
+    });
+
+    events.function('selection.depthPlane', () => selectionDepthPlane);
+
+    events.on('selection.setDepthPlane', (value: boolean) => {
+        if (value !== selectionDepthPlane) {
+            selectionDepthPlane = value;
+            scene.forceRender = true; // the far-plane fade is a render state
+            events.fire('selection.depthPlane', value);
+        }
+    });
 
     events.on('selection.setUseDepth', (value: boolean) => {
         if (value !== selectionUseDepth) {
@@ -1555,8 +1586,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.function('selection.depthFar', () => selectionDepthFar);
 
+    // 0 = no plane, which is what every consumer treats as "off": the intersect,
+    // color-match and splat-value kernels skip the test, intersectMany passes
+    // depthGate false, and the projector never writes the beyond-plane bit. So
+    // this single gate disables the whole far-plane apparatus with no shader work.
     events.function('selection.effectiveDepthFar', () => {
-        if (!selectionUseDepth) {
+        if (!selectionUseDepth || !selectionDepthPlane) {
             return 0;
         }
         return selectionDepthFar > 0 ? selectionDepthFar : scene.camera.focalDistance;

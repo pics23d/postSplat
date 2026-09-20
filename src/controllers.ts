@@ -326,8 +326,13 @@ class PointerController {
             const isOrbit = event.ctrlKey && ctrlDown;
 
             // [custom] Alt+wheel slides the depth selection far plane (wheel up =
-            // farther, ±5% per notch); see selection.stepDepthFar in editor.ts
-            if (event.altKey && camera.scene.events.invoke('selection.useDepth')) {
+            // farther, ±5% per notch); see selection.stepDepthFar in editor.ts.
+            // Only while the plane gate is actually on - with occlusion alone
+            // there is no plane to slide, so Alt+wheel must fall through to zoom
+            // rather than being swallowed here.
+            if (event.altKey &&
+                camera.scene.events.invoke('selection.useDepth') &&
+                camera.scene.events.invoke('selection.depthPlane')) {
                 camera.scene.events.fire('selection.stepDepthFar', Math.sign(wheelDelta));
                 event.preventDefault();
                 return;

@@ -127,12 +127,30 @@
 
     > .depth-panel-slider {
         width: 240px;
-        margin: 0px;
+        margin: 0px 0px 0px 10px;
 
         > .pcui-slider-container > .pcui-slider-bar > .pcui-slider-handle {
             background-color: $clr-default;
             border-radius: 3px;
         }
+    }
+
+    // [custom] the two depth gates, left of the distance slider
+    > .depth-panel-label {
+        margin: 0px 6px 0px 0px;
+        color: $text-secondary;
+        white-space: nowrap;
+    }
+
+    > .depth-panel-toggle {
+        margin: 0px;
+    }
+
+    > .depth-panel-separator {
+        width: 1px;
+        height: 20px;
+        margin: 0px 10px;
+        background-color: $bcg-lighter;
     }
 }
 

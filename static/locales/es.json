@@ -186,6 +186,8 @@
     "select-toolbar.clear-samples": "Limpiar",
     "select-toolbar.contiguous": "Contiguo",
     "select-toolbar.min-size": "Tamaño mín.",
+    "select-toolbar.occlusion": "Oclusión",
+    "select-toolbar.depth-plane": "Plano lejano",
     "select-toolbar.max-opacity": "Opacidad máx.",
     "popup.ok": "Aceptar",
     "popup.cancel": "Cancelar",

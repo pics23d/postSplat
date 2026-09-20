@@ -1,4 +1,4 @@
-import { Button, Element, Container, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, Element, Container, Label, SliderInput } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import { ShortcutManager } from '../shortcut-manager';
@@ -223,14 +223,24 @@ class BottomToolbar extends Container {
         selectionMode.dom.appendChild(depthOnIcon);
         selectionMode.dom.appendChild(depthOffIcon);
 
-        // [custom] depth selection = a far plane at a view-space distance from the
-        // camera. While the toggle is on, a slider + numeric field for that
-        // distance floats above the button (Alt+wheel in the viewport steps it too)
+        // [custom] depth selection = two orthogonal gates, both under this toggle.
+        // Occlusion is upstream's per-pixel frontmost pick; Far plane is a
+        // view-space distance cutoff with the slider + numeric field below
+        // (Alt+wheel in the viewport steps it too). Either, both or neither.
         const depthPanel = new Container({
             id: 'bottom-toolbar-depth-panel',
             class: 'depth-panel',
             hidden: true
         });
+
+        const occlusionLabel = new Label({ class: 'depth-panel-label' });
+        i18n.bindText(occlusionLabel, 'select-toolbar.occlusion');
+        const occlusionToggle = new BooleanInput({ class: 'depth-panel-toggle', value: true });
+
+        const planeLabel = new Label({ class: 'depth-panel-label' });
+        i18n.bindText(planeLabel, 'select-toolbar.depth-plane');
+        const planeToggle = new BooleanInput({ class: 'depth-panel-toggle', value: false });
+
         // the slider spans the close-up retouching range (user decision
         // 2026-09-06); the numeric field stays unbounded for the rare far plane
         const depthSlider = new SliderInput({
@@ -242,6 +252,11 @@ class BottomToolbar extends Container {
             precision: 2,
             value: 1
         });
+        depthPanel.append(occlusionLabel);
+        depthPanel.append(occlusionToggle);
+        depthPanel.append(new Element({ class: 'depth-panel-separator' }));
+        depthPanel.append(planeLabel);
+        depthPanel.append(planeToggle);
         depthPanel.append(depthSlider);
         this.append(depthPanel);
 
@@ -457,12 +472,43 @@ class BottomToolbar extends Container {
             }
         });
 
+        // [custom] the two gates. The distance controls only mean anything while
+        // the plane gate is on, so they grey out with it rather than disappearing
+        // - hiding them would resize the panel under the cursor
+        const syncDepthGates = () => {
+            depthSyncing = true;
+            occlusionToggle.value = events.invoke('selection.occlusion') as boolean;
+            const plane = events.invoke('selection.depthPlane') as boolean;
+            planeToggle.value = plane;
+            depthSlider.enabled = plane;
+            depthSyncing = false;
+        };
+
+        occlusionToggle.on('change', (value: boolean) => {
+            if (!depthSyncing) {
+                events.fire('selection.setOcclusion', value);
+            }
+        });
+
+        planeToggle.on('change', (value: boolean) => {
+            if (!depthSyncing) {
+                events.fire('selection.setDepthPlane', value);
+            }
+        });
+
+        events.on('selection.occlusion', syncDepthGates);
+        events.on('selection.depthPlane', () => {
+            syncDepthGates();
+            syncDepthPanel();
+        });
+
         // an unset plane tracks the camera; poll while the panel is showing
         let depthTimer = -1;
         const updateDepthPanel = (visible: boolean) => {
             depthPanel.hidden = !visible;
             if (visible) {
                 positionDepthPanel();
+                syncDepthGates(); // [custom]
                 syncDepthPanel();
                 if (depthTimer === -1) {
                     depthTimer = window.setInterval(() => {
