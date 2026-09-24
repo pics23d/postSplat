@@ -10,7 +10,7 @@
 
 postSplat is an Electron build of the SuperSplat editor for Windows, with editing tools aimed
 at one job:
-**cleaning gaussian splatting (3dgs) 3d-reconstructions**, where splat training leaves floaters, veils and pale
+**cleaning and editing gaussian splatting (3dgs) 3d-reconstructions**, where splat training leaves floaters, veils and pale
 artefacts between thin structures.
 
 ## Why it exists
