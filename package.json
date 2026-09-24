@@ -2,6 +2,14 @@
     "name": "postsplat",
     "version": "0.1.0",
     "author": "Guy Middleton",
+    "homepage": "https://github.com/pics23d/postSplat",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/pics23d/postSplat.git"
+    },
+    "bugs": {
+        "url": "https://github.com/pics23d/postSplat/issues"
+    },
     "description": "postSplat - Windows desktop editor for cleaning 3D Gaussian Splats. Unofficial fork of PlayCanvas SuperSplat.",
     "keywords": [
         "playcanvas",

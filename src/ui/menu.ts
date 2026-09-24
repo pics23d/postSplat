@@ -409,11 +409,11 @@ class Menu extends Container {
         }, {
             text: () => i18n.t('menu.help.github-repo'),
             icon: 'E259',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat', '_blank')?.focus()
+            onSelect: () => window.open('https://github.com/pics23d/postSplat', '_blank')?.focus() // [custom]
         }, {
             text: () => i18n.t('menu.help.log-issue'),
             icon: 'E336',
-            onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank')?.focus()
+            onSelect: () => window.open('https://github.com/pics23d/postSplat/issues', '_blank')?.focus() // [custom]
         }, {
             // separator
         }, {

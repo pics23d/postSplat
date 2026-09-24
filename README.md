@@ -83,7 +83,7 @@ underlying editor is theirs; the changes here are a narrow fork for one workflow
   <img src="https://contrib.rocks/image?repo=playcanvas/supersplat" />
 </a>
 
-Please report issues with **this fork** here, not to PlayCanvas.
+Please report issues with **this fork** at [https://github.com/pics23d/postSplat/issues](https://github.com/pics23d/postSplat/issues), not to PlayCanvas.
 
 ## Licence
 
