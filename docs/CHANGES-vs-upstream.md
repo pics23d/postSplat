@@ -230,7 +230,8 @@ plus an icon; hooks are one line each in seven files. **Needs B1** (propMode 72)
 ## B4. Magic-wand eyedropper
 
 **Problem.** Selecting sky between thin structures — trees, fences, railings — is *the* recurring
-cleanup job on real captures, because splat training leaves pale low-opacity artefacts there.
+cleanup job on real 3DGS reconstructions, because splat training leaves pale low-opacity
+artefacts there.
 Upstream's colour match is a one-shot per-channel threshold taken from the frontmost splat under
 the cursor, and on these areas it selects almost nothing useful: very low-opacity splats sit in
 front of the sky, so the frontmost splat is usually **not** the one painting the colour you

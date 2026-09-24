@@ -6,11 +6,11 @@ Every section starts with the problem it exists to solve.
 > Illustrations (GIF screen captures) will be added per section. The placeholders below mark
 > where each one goes.
 
-The thesis of this fork is narrow: **stock SuperSplat is a fine editor, but cleaning a real
-photogrammetry capture is a specific, repetitive job**, and the tools for that job can be much
-sharper. Everything here comes out of doing that job on real scans — trees, fences, façades —
-where splat training leaves floaters, veils and pale artefacts in exactly the places that are
-hardest to select.
+The thesis of this fork is narrow: **stock SuperSplat is a fine editor, but cleaning and editing
+a gaussian splatting (3DGS) reconstruction is a specific, repetitive job**, and the tools for that
+job can be much sharper. Everything here comes out of doing that job on real reconstructions —
+trees, fences, façades — where splat training leaves floaters, veils and pale artefacts in exactly
+the places that are hardest to select.
 
 For the engineering triage of which of these is worth taking upstream, see
 [CHANGES-vs-upstream.md](CHANGES-vs-upstream.md). This document is the human version.
@@ -19,7 +19,7 @@ For the engineering triage of which of these is worth taking upstream, see
 
 ## 1. See the capture honestly
 
-**The problem.** A trained splat is full of sky-coloured artefacts, and against the editor's
+**The problem.** A trained reconstruction is full of sky-coloured artefacts, and against the editor's
 black background you cannot tell which pale blobs are real geometry and which are training
 residue. You end up deleting things that turn out to be part of the scene, or leaving haze that
 only becomes obvious after publishing.
