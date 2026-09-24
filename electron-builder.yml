@@ -33,6 +33,3 @@ nsis:
 
 portable:
   artifactName: ${productName}-${version}-portable.exe
-
-zip:
-  artifactName: ${productName}-${version}-win-x64.zip

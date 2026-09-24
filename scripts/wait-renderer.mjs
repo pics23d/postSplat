@@ -38,7 +38,7 @@ for (;;) {
     // the version banner is logged by both debug and release bundles; match the
     // version marker, not the product name, so a rebrand cannot break the harness
     // (the engine's "Powered by PlayCanvas" line only appears in debug builds)
-    if (text.includes('did-finish-load') && /\w*[Ss]plat v\d/.test(text)) {
+    if (text.includes('did-finish-load') && /\w*[Ss]plat v\d/.test(text)) {
         await sleep(settleS * 1000);
         console.log(`renderer ready after ${((Date.now() - started) / 1000).toFixed(1)}s`);
         process.exit(0);

@@ -51,9 +51,9 @@ Grab the latest build from **[Releases](https://github.com/pics23d/postSplat/rel
 
 | file | what it is |
 |---|---|
-| `postSplat-<version>-win-x64.zip` | unpack anywhere and run `postSplat.exe` — nothing installed, nothing written to the registry, delete the folder to remove it |
-| `postSplat-<version>-portable.exe` | the same app as a single self-extracting executable |
-| `postSplat Setup <version>.exe` | a normal installer with a Start-menu entry |
+| `postSplat-<version>-win.zip` (~150 MB) | unpack anywhere and run `postSplat.exe` — nothing installed, nothing written to the registry, delete the folder to remove it |
+| `postSplat-<version>-portable.exe` (~110 MB) | the same app as a single self-extracting executable — smaller, because it is compressed harder |
+| `postSplat Setup <version>.exe` (~110 MB) | a normal installer with a Start-menu entry |
 
 The zip is the easiest way to try it. Two things to expect on first run:
 
