@@ -1,5 +1,5 @@
 # [custom] Desktop packaging. `npm run desktop:pack` -> release/
-appId: de.guy-middleton.postsplat
+appId: de.pics23d.postsplat
 productName: postSplat
 copyright: Copyright (c) 2011-2026 PlayCanvas Ltd. and (c) 2026 Guy Middleton. MIT.
 
