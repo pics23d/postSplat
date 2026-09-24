@@ -1,7 +1,7 @@
 # [custom] Desktop packaging. `npm run desktop:pack` -> release/
-appId: de.guy-middleton.supersplat.desktop
-productName: SuperSplat Desktop
-copyright: MIT — PlayCanvas SuperSplat, custom desktop build
+appId: de.guy-middleton.postsplat
+productName: postSplat
+copyright: Copyright (c) 2011-2026 PlayCanvas Ltd. and (c) 2026 Guy Middleton. MIT.
 
 directories:
   output: release
@@ -25,7 +25,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
-  shortcutName: SuperSplat Desktop
+  shortcutName: postSplat
 
 portable:
   artifactName: ${productName}-${version}-portable.exe

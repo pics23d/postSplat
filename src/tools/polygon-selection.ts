@@ -1,5 +1,6 @@
 import { Events } from '../events';
-import { opFromModifiers } from '../select-op';
+import { opFromModifiers } from '../select-op';
+import { toolColor, toolColorLight } from '../ui/accent'; // [custom]
 
 type Point = { x: number, y: number };
 
@@ -35,7 +36,7 @@ class PolygonSelection {
 
         const paint = () => {
             polyline.setAttribute('points', [...points, currentPoint].filter(v => v).reduce((prev, current) => `${prev}${current.x}, ${current.y} `, ''));
-            polyline.setAttribute('stroke', isClosed() ? '#fa6' : '#f60');
+            polyline.setAttribute('stroke', isClosed() ? toolColorLight() : toolColor());
         };
 
         const commitSelection = async (e: MouseEvent | KeyboardEvent) => {
@@ -49,7 +50,7 @@ class PolygonSelection {
             context.clearRect(0, 0, canvas.width, canvas.height);
 
             context.beginPath();
-            context.fillStyle = '#f60';
+            context.fillStyle = toolColor();
             context.beginPath();
             points.forEach((p, idx) => {
                 if (idx === 0) {

@@ -1,7 +1,7 @@
 {
-    "name": "SuperSplat",
-    "short_name": "SuperSplat",
-    "description": "SuperSplat is an advanced browser-based editor for manipulating and optimizing 3D Gaussian Splats. It is open source and engine agnostic.",
+    "name": "postSplat",
+    "short_name": "postSplat",
+    "description": "postSplat is a Windows desktop editor for cleaning and optimizing 3D Gaussian Splats. Unofficial fork of PlayCanvas SuperSplat.",
     "display": "fullscreen",
     "start_url": "./",
     "scope": "./",

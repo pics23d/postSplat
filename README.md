@@ -1,4 +1,4 @@
-# SuperSplat Desktop — unofficial fork
+# postSplat
 
 > **This is not the official SuperSplat.** It is a personal Windows desktop fork of
 > [SuperSplat](https://github.com/playcanvas/supersplat) by PlayCanvas Ltd, not affiliated with or
@@ -8,7 +8,8 @@
 >
 > Upstream base: **`v3.1.2`** · MIT, same as upstream.
 
-An Electron build of the SuperSplat editor for Windows, with editing tools aimed at one job:
+postSplat is an Electron build of the SuperSplat editor for Windows, with editing tools aimed
+at one job:
 **cleaning real photogrammetry captures**, where splat training leaves floaters, veils and pale
 artefacts between thin structures.
 
@@ -45,7 +46,7 @@ Full detail, and which parts are worth taking upstream:
 ## Status
 
 **Work in progress, used daily by one person.** No release binaries yet; build from source. There
-is no support, no roadmap commitment, and the product name is still provisional.
+is no support and no roadmap commitment.
 
 ## Build
 

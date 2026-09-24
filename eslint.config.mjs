@@ -35,7 +35,18 @@ export default [
             'jsdoc/check-tag-names': 'off',
             'lines-between-class-members': 'off',
             'no-await-in-loop': 'off',
-            'require-atomic-updates': 'off'
+            'require-atomic-updates': 'off',
+
+            // [custom] eslint-plugin-import 2.32.0 (vendored inside
+            // @playcanvas/eslint-config 2.1.0) predates ESLint 9: its import/order
+            // fixer calls sourceCode.getTokenOrCommentAfter, which ESLint removed.
+            // On ESLint 10 any import/order report therefore aborts the entire lint
+            // run with `TypeError: sourceCode.getTokenOrCommentAfter is not a
+            // function` instead of printing the error - and importing any NEWLY
+            // ADDED module reliably produces such a report, whatever the placement.
+            // Disabled until the plugin supports ESLint 9+; import order is still
+            // kept by hand. Upstream will hit this the moment it adds a module.
+            'import/order': 'off'
         }
     }, {
         files: ['**/*.mjs'],

@@ -115,6 +115,35 @@ parser would remove the need for eval entirely.
 own call stack. Scripted tests passed while real keystrokes failed. Drive input paths with real key
 events and use evaluate only to read state.
 
+## A6. Advisory: `import/order` is broken on ESLint 10
+
+`@playcanvas/eslint-config` 2.1.0 vendors `eslint-plugin-import` 2.32.0, which predates ESLint 9.
+Its `import/order` **fixer** calls `sourceCode.getTokenOrCommentAfter`, an API ESLint removed. On
+`eslint@10`, any `import/order` report therefore aborts the whole lint run with
+
+```
+TypeError: sourceCode.getTokenOrCommentAfter is not a function
+Rule: "import/order"
+```
+
+instead of printing the error. The failure mode is the problem, not the rule: you get a stack
+trace naming an arbitrary file rather than a lint message naming the real one.
+
+**How it shows up:** importing any *newly added* module reliably produces such a report, whatever
+the placement or the name — so the first symptom is "lint crashes the moment I add a file". Both
+of this fork's added modules hit it, and isolating it took a while because the crash points at the
+wrong file and moving the import around never helps.
+
+**There is no version to bump to.** 2.32.0 is the current release, and its peer range is
+`^2 || ... || ^9` — ESLint 10 is not declared supported at all, while `@playcanvas/eslint-config`
+declares only `eslint: ">= 8"`, so nothing warns at install time. The real options are: pin ESLint
+to 9.x, move to the maintained fork `eslint-plugin-import-x` (4.17.1, peers
+`^8.57 || ^9 || ^10`), or disable the rule. This fork disabled it with a comment explaining why;
+import order is still maintained by hand.
+
+Worth looking at regardless of anything else in this document — `eslint@10.10.0` sits in
+`devDependencies` today, so this is waiting for whoever adds the next module.
+
 ---
 
 # B — New features, upstream-portable

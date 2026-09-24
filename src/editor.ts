@@ -10,6 +10,7 @@ import { Scene } from './scene';
 import { Splat } from './splat';
 import { mergeSplats } from './splat-merge'; // [custom]
 import { oklabDistance, quantizeColors, rgbToOklab } from './tools/color-quantize'; // [custom]
+import { toolColor } from './ui/accent'; // [custom]
 
 // register for editor and scene events
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
@@ -1110,7 +1111,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         canvas.height = Math.max(1, Math.round(height / 2));
         const context = canvas.getContext('2d');
         context.clearRect(0, 0, canvas.width, canvas.height);
-        context.strokeStyle = '#f60';
+        context.strokeStyle = toolColor();
         context.lineCap = 'round';
         context.lineJoin = 'round';
         context.lineWidth = Math.max(1, 2 * region.radius * canvas.width);

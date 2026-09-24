@@ -125,7 +125,7 @@ class Menu extends Container {
 
         const wordmark = new Label({
             id: 'menu-wordmark',
-            text: 'SuperSplat'
+            text: 'postSplat'
         });
 
         const home = new Container({

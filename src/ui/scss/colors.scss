@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use 'pcui-theme-grey.scss' as theme;
 
 $text-primary: theme.$text-primary;
@@ -10,8 +11,17 @@ $error: theme.$error;
 $clr-default: #b3aaac;
 $clr-disabled: #7c7678;
 $clr-active: white;
-$clr-hilight: #f60;
-$clr-icon-hilight: #FFAF50;
+// [custom] postSplat brand accent - UI CHROME ONLY (buttons, sliders,
+// labels, panel highlights). 7.10:1 on the panel background.
+$clr-hilight: #74a6f9;
+$clr-icon-hilight: color.adjust($clr-hilight, $saturation: -18%, $lightness: 8%);
+
+// [custom] viewport tool overlays: marquee, brush circle, lasso, polygon,
+// wand polyline. Deliberately NOT the brand colour - these are drawn over
+// the scene, and sky sits within ~11 deg of the brand blue at 1.14:1, which
+// is invisible. This orange is the brand's near-complement (hue 24 vs 217).
+$clr-tool: #f60;
+$clr-tool-light: color.adjust($clr-tool, $lightness: 18%);
 
 $bcg-lighter: #444;
 $bcg-light: #555;

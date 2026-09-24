@@ -4,10 +4,11 @@ import { Camera, Mat4 } from 'playcanvas';
 import { Element } from '../element';
 import { Events } from '../events';
 import { Splat } from '../splat';
+import { hilightColor } from './accent'; // [custom]
 import { Histogram } from './histogram';
 import { axisColor, axisValueOf, chromaGainFor, isColorAxisMode, rgbToHsv, Rgb } from './histogram-color-bar';
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import { Tooltips } from './tooltips';
 
 // gpu propMode constants. these must match the propMode dispatch in
 // src/shaders/splat-value-shader.ts.
@@ -913,8 +914,8 @@ class DataPanel extends Container {
         // create rect element
         const rect = document.createElementNS(svg.namespaceURI, 'rect') as SVGRectElement;
         rect.setAttribute('id', 'highlight-rect');
-        rect.setAttribute('fill', 'rgba(255, 102, 0, 0.2)');
-        rect.setAttribute('stroke', '#f60');
+        rect.setAttribute('fill', `${hilightColor()}33`);
+        rect.setAttribute('stroke', hilightColor());
         rect.setAttribute('stroke-width', '1');
         rect.setAttribute('stroke-dasharray', '5, 5');
 

@@ -1,5 +1,6 @@
 import { Events } from '../events';
 import { opFromModifiers } from '../select-op';
+import { toolColor } from '../ui/accent'; // [custom]
 
 class SphereBrushSelection {
     activate: () => void;
@@ -22,7 +23,7 @@ class SphereBrushSelection {
         [['0%', '0.5'], ['55%', '0.25'], ['100%', '0.08']].forEach(([offset, opacity]) => {
             const stop = document.createElementNS(svg.namespaceURI, 'stop');
             stop.setAttribute('offset', offset);
-            stop.setAttribute('stop-color', '#f60');
+            stop.setAttribute('stop-color', toolColor());
             stop.setAttribute('stop-opacity', opacity);
             gradient.appendChild(stop);
         });
@@ -94,7 +95,7 @@ class SphereBrushSelection {
                 appendPoint(x, y);
 
                 context.beginPath();
-                context.strokeStyle = '#f60';
+                context.strokeStyle = toolColor();
                 context.lineCap = 'round';
                 context.lineWidth = radius * 2;
                 context.moveTo(prev.x, prev.y);

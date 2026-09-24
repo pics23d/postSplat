@@ -2,6 +2,7 @@ import { BooleanInput, Button, Container, Element, Label, SelectInput, SliderInp
 
 import { EditOp } from '../edit-ops';
 import { Events } from '../events';
+import { toolColor } from '../ui/accent'; // [custom]
 import { i18n } from '../ui/localization';
 import addSvg from '../ui/svg/select-add.svg';
 import intersectSvg from '../ui/svg/select-intersect.svg';
@@ -257,7 +258,7 @@ class EyedropperSelection {
         parent.appendChild(svg);
         const polyline = document.createElementNS(svg.namespaceURI, 'polyline') as SVGPolylineElement;
         polyline.setAttribute('fill', 'none');
-        polyline.setAttribute('stroke', '#f60');
+        polyline.setAttribute('stroke', toolColor());
         polyline.setAttribute('stroke-width', '2');
         svg.appendChild(polyline);
 

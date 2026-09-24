@@ -1,5 +1,6 @@
 import { Events } from '../events';
 import { opFromModifiers } from '../select-op';
+import { toolColor } from '../ui/accent'; // [custom]
 
 class BrushSelection {
     activate: () => void;
@@ -43,7 +44,7 @@ class BrushSelection {
 
             if (dragId !== undefined) {
                 context.beginPath();
-                context.strokeStyle = '#f60';
+                context.strokeStyle = toolColor();
                 context.lineCap = 'round';
                 context.lineWidth = radius * 2;
                 context.moveTo(prev.x, prev.y);

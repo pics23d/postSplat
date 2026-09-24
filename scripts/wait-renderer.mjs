@@ -35,9 +35,10 @@ for (;;) {
         console.error(text.split('\n').filter(l => /fail|gone|error/i.test(l)).slice(-5).join('\n'));
         process.exit(1);
     }
-    // the SuperSplat version banner is logged by both debug and release bundles
+    // the version banner is logged by both debug and release bundles; match the
+    // version marker, not the product name, so a rebrand cannot break the harness
     // (the engine's "Powered by PlayCanvas" line only appears in debug builds)
-    if (text.includes('did-finish-load') && text.includes('SuperSplat v')) {
+    if (text.includes('did-finish-load') && /\w*[Ss]plat v\d/.test(text)) {
         await sleep(settleS * 1000);
         console.log(`renderer ready after ${((Date.now() - started) / 1000).toFixed(1)}s`);
         process.exit(0);

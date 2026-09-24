@@ -1,8 +1,8 @@
 {
-    "name": "supersplat-desktop",
+    "name": "postsplat",
     "version": "0.1.0",
     "author": "Guy Middleton",
-    "description": "Unofficial Windows desktop fork of PlayCanvas SuperSplat (3D Gaussian Splat editor)",
+    "description": "postSplat - Windows desktop editor for cleaning 3D Gaussian Splats. Unofficial fork of PlayCanvas SuperSplat.",
     "keywords": [
         "playcanvas",
         "ply",

@@ -20,7 +20,7 @@ import { i18n } from './ui/localization';
 type FilePickerAcceptType = unknown;
 
 const SuperFileType: FilePickerAcceptType[] = [{
-    description: 'SuperSplat document',
+    description: 'postSplat document',
     accept: {
         'application/x-supersplat': ['.ssproj']
     }

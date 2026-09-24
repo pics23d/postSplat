@@ -77,6 +77,15 @@ body {
     background-color: $bcg-darker;
 }
 
+:root {
+    // [custom] single source of truth for the accents: canvas strokes and
+    // SVG attributes are set from TypeScript and cannot read SCSS vars,
+    // so they read these back (see src/ui/colors.ts)
+    --clr-hilight: #{$clr-hilight};
+    --clr-tool: #{$clr-tool};
+    --clr-tool-light: #{$clr-tool-light};
+}
+
 #sep-container > span {
     color: white;
 }

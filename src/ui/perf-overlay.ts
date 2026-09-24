@@ -1,6 +1,7 @@
 import { Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import { Events } from '../events';
+import { hilightColor } from './accent'; // [custom]
 
 // text refresh interval. The graph redraws every frame, but the numbers are
 // unreadable if they change 60 times a second.
@@ -20,7 +21,7 @@ const STATS_FRAMES = 60;
 const SCALES = [1, 2, 4, 8, 16.7, 33.3, 66.7, 133.3, 266.7];
 
 const GRAPH_BG = 'rgba(0, 0, 0, 0.35)';
-const GRAPH_BAR = '#f60';
+const GRAPH_BAR = hilightColor();
 const GRAPH_MEDIAN = 'rgba(255, 255, 255, 0.5)';
 
 const fmt = (ms: number) => (ms >= 10 ? ms.toFixed(1) : ms.toFixed(2));
