@@ -40,13 +40,35 @@ Motivation first — the job it makes easier, then the feature:
 - **Reading the colour axes** → colour ramp and reference markers under the histogram
 - **Screen space while inspecting** → F1 cycles panels and toolbars
 
-Full detail, and which parts are worth taking upstream:
-**[docs/CHANGES-vs-upstream.md](docs/CHANGES-vs-upstream.md)**.
+**[docs/OVERVIEW.md](docs/OVERVIEW.md)** walks through all of it in the order the work actually
+happens, with the reasoning and the honest limits of each tool.
+**[docs/CHANGES-vs-upstream.md](docs/CHANGES-vs-upstream.md)** is the engineering triage: which
+changes are portable back to upstream and what each would cost.
+
+## Download
+
+Grab the latest build from **[Releases](https://github.com/pics23d/postSplat/releases)**:
+
+| file | what it is |
+|---|---|
+| `postSplat-<version>-win-x64.zip` | unpack anywhere and run `postSplat.exe` — nothing installed, nothing written to the registry, delete the folder to remove it |
+| `postSplat-<version>-portable.exe` | the same app as a single self-extracting executable |
+| `postSplat Setup <version>.exe` | a normal installer with a Start-menu entry |
+
+The zip is the easiest way to try it. Two things to expect on first run:
+
+- **Windows SmartScreen will warn you.** The binaries are unsigned (a code-signing certificate is
+  a recurring cost this project does not carry). Choose *More info → Run anyway*, or don't run it
+  — that is a reasonable call for an unsigned binary from a stranger.
+- **A WebGPU-capable GPU is required.** The upstream 3.x engine is WebGPU-only. Without it the app
+  says so on startup rather than failing mysteriously.
+
+Tested on NVIDIA. If it misbehaves on AMD or Intel, that is useful to hear — the custom shaders
+are the likely culprit and they have only been exercised on one vendor.
 
 ## Status
 
-**Work in progress, used daily by one person.** No release binaries yet; build from source. There
-is no support and no roadmap commitment.
+**Work in progress, used daily by one person.** There is no support and no roadmap commitment.
 
 ## Build
 

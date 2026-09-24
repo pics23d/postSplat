@@ -4,14 +4,32 @@ This is an **unofficial Windows desktop fork** of
 [playcanvas/supersplat](https://github.com/playcanvas/supersplat), based on **`v3.1.2`**
 (`0911f78`). It is MIT, like upstream, and not affiliated with or endorsed by PlayCanvas.
 
-32 commits, 127 files, +16,482 / −2,271 (about 7,000 of the insertions are `package-lock.json`).
+31 commits on top of that base; 141 files and about +12,600 / −1,900 lines excluding
+`package-lock.json`.
 
 This document exists because most of that diff is **not** PR material — it carries Electron and
 Windows assumptions that have no place in a browser editor. But some of it is genuinely portable,
 and a few pieces are upstream bug fixes. This is a map, sorted so the cheap wins come first.
 
+**This is a reference, not a pull request.** Nothing here needs anything from you — the fork will
+carry on regardless. It exists so that if any of it looks useful, you can see what was done and,
+more importantly, *why*, without reading 31 commits.
+
 **Take anything you want.** MIT, no attribution needed beyond the licence, no expectation of a
 reply. If something is useful but awkwardly shaped, say so and I will reshape it.
+
+### Finding the code behind any entry
+
+- Base is upstream `v3.1.2` (`0911f78`), so `git diff 0911f78..main -- <path>` is the whole of
+  this fork's change to any file.
+- Every upstream line touched is marked `// [custom]` — `git grep "\[custom\]" -- src` lands on
+  all of them (80 files).
+- Commits are feature-scoped: `git log --oneline 0911f78..main` reads as a list of the entries
+  below, and individual ones are `git cherry-pick`-able or `git format-patch`-able.
+- **Caveat on rebasing:** this fork is based on `v3.1.2`, and upstream has since shipped 3.2.0 and
+  3.3.0. The 3.2.0 splat-pass rewrite deleted `src/splat-centers.ts` and heavily reworked
+  `projected-splat-renderer.ts` — which several B-section entries touch. The A-section fixes are
+  unaffected.
 
 ## The one structural fact that matters
 

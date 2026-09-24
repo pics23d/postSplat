@@ -17,6 +17,10 @@ asar: true
 
 win:
   target:
+    # zip first: the lowest-friction way to hand a build to someone -
+    # unpack and run, no installer, nothing written to the registry, and it
+    # survives being passed around as a file. nsis stays for a real install.
+    - zip
     - nsis
     - portable
   icon: static/icons/logo-512.png
@@ -29,3 +33,6 @@ nsis:
 
 portable:
   artifactName: ${productName}-${version}-portable.exe
+
+zip:
+  artifactName: ${productName}-${version}-win-x64.zip
